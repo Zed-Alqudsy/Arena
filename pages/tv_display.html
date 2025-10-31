@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TV • Display</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    body {
+      background: #0b1020;
+      color: #e8f0ff;
+      font-family: system-ui, sans-serif;
+      padding: 2rem
+    }
+
+    .card {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center
+    }
+
+    .final-number {
+      font-size: 5rem;
+      font-weight: 900;
+      line-height: 1
+    }
+
+    .flag {
+      width: 48px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover
+    }
+
+    .score-num {
+      font-variant-numeric: tabular-nums
+    }
+
+    .blackout {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 50;
+      display: none
+    }
+
+    .blackout.show {
+      display: block
+    }
+
+    .hidden-view {
+      display: none
+    }
+
+    /* bottom-right screen tag */
+    .tv-watermark {
+      position: fixed;
+      right: 24px;
+      bottom: 16px;
+      padding: 6px 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: rgba(0, 0, 0, .55);
+      color: #fff;
+      border-radius: 8px;
+      font-size: clamp(12px, 1.6vw, 16px);
+      z-index: 9999;
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Blackout when mode is "hide" or unknown -->
+  <div id="blackout" class="blackout"></div>
+
+  <div class="max-w-6xl mx-auto" id="host">
+    <!-- HEAD -->
+    <h1 id="hdr" class="text-2xl font-bold mb-4 text-center">DISPLAY</h1>
+
+    <!-- SCOREBOARD VIEW -->
+    <section id="view-scoreboard" class="hidden-view">
+      <div class="card mb-4">
+        <div class="flex justify-center items-center gap-3 mb-2">
+          <img id="scb-flag" class="flag" alt="flag" />
+          <div id="scb-name" class="text-4xl font-bold tracking-wide">—</div>
+        </div>
+      </div>
+      <div id="scb-judges" class="grid grid-cols-5 gap-3 mb-6"></div>
+      <div class="card">
+        <div class="text-sm opacity-70 mb-1">FINAL</div>
+        <div id="scb-final" class="score-num final-number">0.00</div>
+      </div>
+    </section>
+
+    <!-- INTRO VIEW (placeholder for now) -->
+    <section id="view-intro" class="hidden-view">
+      <div class="card">
+        <div class="text-xl opacity-80">INTRO</div>
+        <div id="intro-info" class="mt-2">Awaiting data…</div>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD VIEW -->
+    <section id="view-leaderboard" class="hidden-view">
+      <div class="card mb-4">
+        <div class="text-2xl font-bold tracking-wide">LEADERBOARD</div>
+        <div class="text-sm opacity-70">Auto-updates when you publish from Run Console</div>
+      </div>
+
+      <!-- Table container -->
+      <div class="card">
+        <table class="w-full">
+          <thead>
+            <tr class="text-left text-sm opacity-70">
+              <th class="w-16">#</th>
+              <th>Athlete</th>
+              <th class="text-right">Final</th>
+            </tr>
+          </thead>
+          <tbody id="lb-body">
+            <!-- rows injected here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    (function () {
+      // ---------- Params
+      const qs = new URLSearchParams(location.search);
+      const screen = (qs.get('screen') || 'live1').toLowerCase();
+      const cid = qs.get('cid') || '';
+      const eid = qs.get('eid') || '';
+      const heat = qs.get('heat') || '';
+      document.title = `TV • Display (${screen})`;
+
+      // ---------- Keys
+      const DISPLAY_KEY = `display_control_${screen}`;   // intro | scoreboard | leaderboard | hide
+      const REVEAL_KEY = 'reveal';                      // { cid,eid,heat,aid,judgeTotals[],final }
+
+      // Watermark: LIVE 1 / LIVE 2
+      (function () {
+        const label = (screen === 'live2') ? 'LIVE 2' : 'LIVE 1';
+        let wm = document.getElementById('tv-watermark');
+        if (!wm) {
+          wm = document.createElement('div');
+          wm.id = 'tv-watermark';
+          wm.className = 'tv-watermark';
+          document.body.appendChild(wm);
+        }
+        wm.textContent = label;
+      })();
+
+
+      // ---------- Elements
+      const blackout = id('blackout');
+      const host = id('host');
+      const viewIntro = id('view-intro');
+      const viewScoreboard = id('view-scoreboard');
+      const viewLeaderboard = id('view-leaderboard');
+
+      const scbName = id('scb-name');
+      const scbFlag = id('scb-flag');
+      const scbFinal = id('scb-final');
+      const scbJudgesWrap = id('scb-judges');
+
+      // Build 5 judge tiles
+      (function buildJudgeTiles(n = 5) {
+        scbJudgesWrap.innerHTML = '';
+        for (let i = 1; i <= n; i++) {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `<div class="text-xs opacity-70">J${i}</div>
+                       <div class="mt-2 text-2xl font-bold score-num" id="scb-j${i}">—</div>`;
+          scbJudgesWrap.appendChild(div);
+        }
+      })();
+
+      // ---------- Helpers
+      function id(x) { return document.getElementById(x); }
+      function show(view) {
+        viewIntro.classList.add('hidden-view');
+        viewScoreboard.classList.add('hidden-view');
+        viewLeaderboard.classList.add('hidden-view');
+        if (view) view.classList.remove('hidden-view');
+      }
+
+      // --- renderIntro (read-only; DOM-only mapping) ---
+      function renderIntro() {
+        const host = viewIntro;
+
+        // competition meta
+        let comp = {};
+        try {
+          const active = JSON.parse(localStorage.getItem('competitions_active') || 'null');
+          if (active && (active.cid === cid || active.id === cid)) comp = active;
+          if (!comp.name) {
+            const comps = JSON.parse(localStorage.getItem('competitions') || '[]');
+            const f = Array.isArray(comps) ? comps.find(c => (c.cid === cid || c.id === cid)) : null;
+            if (f) comp = f;
+          }
+        } catch { }
+
+        // now-playing athlete (from reveal)
+        let rev = null;
+        try { rev = JSON.parse(localStorage.getItem(REVEAL_KEY) || 'null'); } catch { }
+        const aid = rev?.aid;
+
+        // map aid -> athlete
+        let ath = null;
+        try {
+          const arr = JSON.parse(localStorage.getItem(`athletes_${cid}`) || '[]');
+          if (Array.isArray(arr)) ath = arr.find(a => String(a.id ?? a.aid) === String(aid)) || null;
+        } catch { }
+
+        const name = ath?.name || ath?.displayName || (aid ? `Athlete ${aid}` : '—');
+        const country = (ath?.country || ath?.nation || '').toUpperCase();
+
+        // resolve assets (no writes)
+        const photo = ath?.photo || ath?.img || (aid ? `../assets/photos/${aid}.jpg` : '');
+        const video = ath?.video || ath?.media || (aid ? `../assets/videos/${aid}.mp4` : '');
+        const flag = country ? `../assets/flags/${country}.png` : '';
+
+        host.innerHTML = `
+    <div class="grid grid-cols-2 gap-6">
+      <section class="relative rounded-xl overflow-hidden border border-white/10">
+        <video id="introVideo" class="absolute inset-0 w-full h-full object-cover hidden" autoplay muted loop playsinline></video>
+        <img   id="introPhoto" class="absolute inset-0 w-full h-full object-cover hidden" alt="athlete">
+        <div class="absolute left-3 bottom-3 text-xs opacity-80 bg-black/40 px-2 py-1 rounded">ATHLETE MEDIA</div>
+      </section>
+
+      <aside class="rounded-xl border border-white/10 p-5 flex flex-col justify-between">
+        <div>
+          <div class="text-sm opacity-70">Athlete Intro</div>
+          <h1 class="text-4xl font-extrabold mt-1">${name}</h1>
+          <div class="flex items-center gap-2 mt-2">
+            ${flag ? `<img src="${flag}" class="w-8 h-6 rounded border border-white/30" alt="${country}" onerror="this.remove()">` : ''}
+            <div class="opacity-90">${country || ''}</div>
+          </div>
+        </div>
+        <div class="opacity-80">
+          <div class="text-sm">${comp?.name || cid || ''}</div>
+          <div class="text-xs opacity-70">${[comp?.venue, comp?.date].filter(Boolean).join(' • ')}</div>
+        </div>
+      </aside>
+    </div>
+  `;
+
+        // prefer video; fallback to photo
+        const v = host.querySelector('#introVideo');
+        const img = host.querySelector('#introPhoto');
+
+        function showPhoto(src) {
+          if (!src) return;
+          img.src = src;
+          img.classList.remove('hidden');
+          if (v) { v.removeAttribute('src'); try { v.load(); } catch { } }
+        }
+
+        if (video) {
+          v.src = video;
+          try { v.load(); } catch { }
+          v.oncanplay = () => { img.classList.add('hidden'); v.classList.remove('hidden'); v.play().catch(() => { }); };
+          v.onerror = () => { showPhoto(photo); };
+        } else {
+          showPhoto(photo);
+        }
+      }
+
+      // --- Intro helpers (read-only, DOM-only mapping) ---
+      function getCompetitionMeta() {
+        const active = readJSON('competitions_active', null);
+        if (active && (active.cid === cid || active.id === cid)) return active;
+        const comps = readJSON('competitions', []);
+        return (Array.isArray(comps) && comps.find(c => (c.cid === cid || c.id === cid))) || { name: cid, venue: '', date: '' };
+      }
+      function getAthleteByAid(aid) {
+        const list = readJSON(`athletes_${cid}`, []);
+        if (!Array.isArray(list)) return null;
+        return list.find(x => x && (x.aid === aid || x.id === aid)) || null;
+      }
+      // Resolve asset URLs without persisting anything.
+      // Priority: explicit fields on athlete object -> conventional paths -> null
+      function resolveAssets(ath) {
+        const aid = ath?.aid || ath?.id || '';
+        const country = (ath?.country || ath?.nation || '').toUpperCase();
+        const photo =
+          ath?.photo || ath?.img ||
+          (aid ? `/assets/photos/${aid}.jpg` : null);
+        const video =
+          ath?.video || ath?.media ||
+          (aid ? `/assets/videos/${aid}.mp4` : null);
+        const flag =
+          ath?.flagUrl ||
+          (country ? `/assets/flags/${country}.png` : null);
+        return { photo, video, flag, country };
+      }
+
+
+
+
+      // ---------- Mode gate (hardened)
+      function gate() {
+        try {
+          let mode = (localStorage.getItem(DISPLAY_KEY) || '').replace(/^["']|["']$/g, '').toLowerCase();
+
+          if (mode !== 'scoreboard' && mode !== 'intro' && mode !== 'leaderboard') {
+            mode = 'scoreboard'; // safe fallback: never black
+          }
+          id('hdr').textContent = mode.toUpperCase();
+          blackout.classList.remove('show');
+          host.style.visibility = 'visible';
+
+
+          if (mode === 'scoreboard') {
+            show(viewScoreboard);
+          } else if (mode === 'leaderboard') {
+            show(viewLeaderboard);
+            try { renderLeaderboard(); }
+            catch (err) {
+              console.error('leaderboard render failed:', err);
+              // graceful fallback without writing storage
+              show(viewScoreboard);
+            }
+
+          } else if (mode === 'intro') {
+            show(viewIntro);
+            renderIntro();
+          } else {
+
+            show(viewScoreboard); // ultimate default
+          }
+
+        } catch (e) {
+          console.error('gate() error:', e);
+          show(viewScoreboard);
+        }
+
+      }
+
+      // ---------- Scoreboard apply (safe)
+      function applyScoreboardFromReveal() {
+        let pkt = null;
+        try { pkt = JSON.parse(localStorage.getItem(REVEAL_KEY) || 'null'); } catch { }
+        if (!pkt) return;
+
+        // Athlete name (map at render only)
+        try {
+          const athletes = JSON.parse(localStorage.getItem(`athletes_${pkt.cid}`) || '[]');
+          const ath = athletes.find(a => String(a.id || a.aid) === String(pkt.aid)) || {};
+          scbName.textContent = ath.name || `Athlete ${pkt.aid || ''}`;
+          if (ath.country) {
+            scbFlag.src = `../assets/flags/${ath.country}.png`;
+            scbFlag.onerror = () => { scbFlag.removeAttribute('src'); scbFlag.alt = ath.country; };
+          } else {
+            scbFlag.removeAttribute('src'); scbFlag.alt = '';
+          }
+        } catch {
+          scbName.textContent = `Athlete ${pkt.aid || ''}`;
+          scbFlag.removeAttribute('src'); scbFlag.alt = '';
+        }
+
+        // Judges: prefer pkt.judgeTotals; fallback to scores array
+        let totals = Array.isArray(pkt.judgeTotals) ? pkt.judgeTotals.slice(0, 5) : [];
+        if (!totals.length) {
+          try {
+            const key = `scores_${cid}_${eid}_${heat}`;
+            const raw = JSON.parse(localStorage.getItem(key) || '{"results":[]}');
+            const rows = Array.isArray(raw) ? raw : (raw.results || []);
+            const list = rows.filter(r => String(r.aid || r.athleteId) === String(pkt.aid));
+            totals = list.map(r => {
+              if (typeof r.total === 'number') return r.total;
+              const s = r.totals || {};
+              const nums = [s.difficulty, s.execution, s.flow].map(Number).filter(Number.isFinite);
+              return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : NaN;
+            }).filter(Number.isFinite).slice(0, 5);
+          } catch { }
+        }
+        for (let i = 0; i < 5; i++) {
+          const el = id(`scb-j${i + 1}`);
+          if (!el) continue;
+          const v = totals[i];
+          el.textContent = (v != null && !isNaN(v)) ? Number(v).toFixed(2) : '—';
+        }
+
+        let final = pkt.final;
+        if (final == null || isNaN(final)) {
+          final = totals.length ? (totals.reduce((s, v) => s + Number(v), 0) / totals.length) : NaN;
+        }
+        scbFinal.textContent = (final != null && !isNaN(final)) ? Number(final).toFixed(2) : '—';
+      }
+
+      // ---------- Leaderboard renderer (hardened)
+      function renderLeaderboard() {
+        try {
+          const lbKey = `leaderboard_${cid}_${eid}`;
+          const raw = localStorage.getItem(lbKey);
+          if (!raw) { paintEmptyLB(); return; }
+
+          let data;
+          try { data = JSON.parse(raw); } catch { paintEmptyLB(); return; }
+          const rows = Array.isArray(data?.rows) ? data.rows : [];
+
+          let athletes = [];
+          try { athletes = JSON.parse(localStorage.getItem(`athletes_${cid}`) || '[]'); } catch { }
+          const nameById = Object.fromEntries(
+            athletes.map(a => [String(a.aid ?? a.id), a.name ?? a.displayName ?? `Athlete ${a.aid ?? a.id}`])
+          );
+
+          const tbody = document.getElementById('lb-body');
+          if (!tbody) return;
+
+          if (!rows.length) { paintEmptyLB(); return; }
+
+          const html = rows.map(r => `
+        <tr class="border-t border-white/10">
+          <td class="py-2 pr-3 text-center font-bold">${r.rank ?? ''}</td>
+          <td class="py-2">${nameById[String(r.aid)] || r.aid}</td>
+          <td class="py-2 text-right font-semibold score-num">${Number.isFinite(+r.final) ? (+r.final).toFixed(2) : '—'}</td>
+        </tr>
+      `).join('');
+
+          tbody.innerHTML = html;
+        } catch (err) {
+          console.error('renderLeaderboard fatal:', err);
+          paintEmptyLB();
+        }
+      }
+
+      function paintEmptyLB() {
+        const tbody = document.getElementById('lb-body');
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center opacity-70">No leaderboard yet. Publish from Run Console.</td></tr>`;
+        }
+      }
+
+      // ---------- Init & listeners
+      gate();
+      applyScoreboardFromReveal(); // draw last cached scoreboard
+      window.addEventListener('storage', (e) => {
+        if (e.key === DISPLAY_KEY) gate();
+        if (e.key === REVEAL_KEY) {
+          applyScoreboardFromReveal();
+          // if current mode is intro, re-render the intro view too
+          const m = (localStorage.getItem(DISPLAY_KEY) || '').replace(/^["']|["']$/g, '').toLowerCase();
+          if (m === 'intro') renderIntro();
+        }
+        if (e.key === `leaderboard_${cid}_${eid}`) renderLeaderboard();  // ← add
+        if (e.key === 'leaderboard_tick') renderLeaderboard();            // ← add
+      });
+    })();
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Athlete Center • XGAMES ARENA</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/shared/core.js"></script>
+  <script src="/shared/ui.js"></script>
+  <script src="/shared/state.js"></script>
+  <script src="/shared/lang.js"></script>
+
+  <style>
+    :root {
+      --blue: #2563eb;
+      --navy: #1e3a8a;
+      --orange: #F37021;
+      --bg: #f9fafb;
+      --card: #fff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --btn: #2563eb;
+      --btn-ink: #fff;
+      --soft: #f1f5f9;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    header {
+      background: linear-gradient(180deg, var(--blue) 0%, var(--navy) 100%);
+      color: #fff;
+      padding: 72px 20px 96px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: .92;
+      font-size: 16px;
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: -56px auto 0;
+      padding: 0 20px 64px;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .tag {
+      background: var(--soft);
+      color: var(--navy);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media(min-width:760px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+      transition: all .25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, .18);
+      border-color: var(--blue);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      background: var(--btn);
+      color: var(--btn-ink);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      border: 1px solid rgba(0, 0, 0, .06);
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--navy);
+      border: 1px solid var(--line);
+    }
+
+    footer {
+      margin-top: 60px;
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🏃 Athlete Center</h1>
+    <p>Access your athlete tools in one place</p>
+  </header>
+
+  <div class="wrap">
+    <!-- Floating header card -->
+    <div class="header">
+      <div class="title">
+        <div style="font-size:22px">👤</div>
+        <h2>Athlete Dashboard</h2>
+        <span class="tag">Home</span>
+      </div>
+      <!-- Matches Competition Center back link -->
+      <a class="btn secondary" href="/platform_index.html">← Back to Platform Home</a>
+    </div>
+
+    <!-- Cards -->
+    <div class="grid">
+      <a href="/modules/athlete/register.html" class="card">
+        <div class="row">
+          <h3 style="margin:0">Register as Athlete</h3>
+          <span class="tag">NSID</span>
+        </div>
+        <p class="muted" style="margin:0">Start your athlete registration and get your NSID.</p>
+      </a>
+
+      <a href="/modules/athlete/join.html" class="card">
+        <div class="row">
+          <h3 style="margin:0">Join a Competition</h3>
+          <span class="tag">Entries</span>
+        </div>
+        <p class="muted" style="margin:0">Enter a competition using your NSID.</p>
+      </a>
+
+      <a href="#" class="card" style="opacity:.6; pointer-events:none;">
+        <div class="row">
+          <h3 style="margin:0">My Entries</h3>
+          <span class="tag">Soon</span>
+        </div>
+        <p class="muted" style="margin:0">Coming soon — view your joined competitions.</p>
+      </a>
+
+      <!-- 🏆 Coming Soon: Apply for Sponsorship -->
+      <a href="#" class="card" style="opacity:.6; pointer-events:none;">
+        <div class="row">
+          <h3 style="margin:0">Apply for Sponsorship</h3>
+          <span class="tag">Soon</span>
+        </div>
+        <p class="muted" style="margin:0">Coming soon — submit your achievements to potential sponsors.</p>
+      </a>
+    </div>
+    
+    <footer>
+      XGAMES ARENA — Athlete Module v1.0
+    </footer>
+  </div>
+
+</body>
+
+</html>

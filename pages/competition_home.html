@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Competition Home</title>
+  <link rel="stylesheet" href="../styles.css">
+  <script src="../shared/core.js"></script>
+  <script src="../shared/state.js"></script>
+  <script src="../shared/ui.js"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <a class="btn" href="../index.html">← Centre</a>
+      <h2 id="pageTitle" style="margin:0">Competition Home</h2>
+      <span id="cidTag" class="tag"></span>
+    </div>
+  </div> <!-- header -->
+  <div class="kv" style="gap:8px; margin:12px 0;">
+    <a class="btn" href="../modules/competition/setup_new.html">+ Create New Competition</a>
+    <a class="btn" href="competition_list.html">Choose Current Active Competition</a>
+  </div>
+
+  <div class="tabs">
+    <span class="tab active">Overview</span>
+    <a class="tab" href="#events">Events</a>
+    <a class="tab" href="#people">People</a>
+    <a class="tab" href="#run">Run</a>
+  </div>
+
+
+  <div class="grid">
+    <div class="card">
+      <h3>Overview</h3>
+      <div id="meta" class="muted">Loading…</div>
+      <div class="kv" style="margin-top:8px">
+        <span id="evCount" class="tag">Events: 0</span>
+        <span id="athCount" class="tag">Athletes: 0</span>
+        <span id="judCount" class="tag">Judges: 0</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Go to Event Admin</h3>
+      <p class="muted">Open first event (if any) to continue.</p>
+      <button id="openEvent" class="btn">Open Event Admin</button>
+    </div>
+
+    <div class="card" id="events">
+      <h3>Events & Heats</h3>
+      <p><a class="btn primary" id="btnEvents" href="#">Open Event Admin</a></p>
+      <div id="heatList" class="muted">Loading…</div>
+    </div>
+  </div>
+
+
+  </div>
+  <script>
+    Core.requireParams(['cid'], '../index.html');
+    var cid = Core.getParam('cid');
+    document.getElementById('cidTag').textContent = `cid=${cid}`;
+
+    let comps = [];
+    try { comps = JSON.parse(localStorage.getItem('competitions_active') || '[]'); } catch (_) { }
+    const comp = comps.find(c => c.cid === cid);
+
+    // Set header title to "CID — Name"
+    const ttl = document.getElementById('pageTitle');
+    if (comp) {
+      ttl.textContent = `${comp.cid} — ${comp.name}`;
+    } else {
+      ttl.textContent = `cid=${cid} — Unknown competition`;
+    }
+
+    document.getElementById('meta').textContent = comp ? `${comp.name} • ${comp.venue} • ${comp.date} • ${comp.status}` : 'Unknown competition';
+
+    const events = State.arr(State.keys.events(cid));
+    const athletes = State.arr(State.keys.athletes(cid));
+    const judges = State.arr(State.keys.judges(cid));
+    document.getElementById('evCount').textContent = `Events: ${events.length}`;
+    document.getElementById('athCount').textContent = `Athletes: ${athletes.length}`;
+    document.getElementById('judCount').textContent = `Judges: ${judges.length}`;
+
+    document.getElementById('openEvent').onclick = () => {
+      if (!events.length) { UI.toast('No events yet'); return; }
+      const eid = events[0].eid || 'EID_1';
+      location.href = Core.buildUrl('event_admin.html', { cid, eid });
+    };
+
+    function statusTag(s) {
+      const v = String(s || 'Not Started').toLowerCase();
+      if (v === 'running') return `<span class="tag" style="background:#eab3081a;border:1px solid #eab308;">Running</span>`;
+      if (v === 'done' || v === 'completed' || v === 'finalised')
+        return `<span class="tag" style="background:#16a34a1a;border:1px solid #16a34a;">Done</span>`;
+      return `<span class="tag" style="background:#94a3b81a;border:1px solid #94a3b8;">Not Started</span>`;
+    }
+
+    // --- Render Events & Heats with "Run Heat" buttons ---
+    (function renderHeats() {
+      const card = document.getElementById('events');
+      const listEl = document.getElementById('heatList');
+
+      // If no events → hide the whole card
+      if (!events.length) {
+        if (card) card.style.display = 'none';
+        if (listEl) listEl.innerHTML = '';
+        return;
+      }
+
+      let hasHeats = false;
+      const parts = [];
+
+      events.forEach(ev => {
+        const eid = ev.eid || ev.name || 'EID_1';
+
+        // Read using State helper (shell may exist, but we only show if heats[])
+        const key = State.keys.heats(cid, eid);
+        const shell = State.getJSON(key, {});
+        const heats = Array.isArray(shell.heats) ? shell.heats : [];
+
+        if (heats.length > 0) {
+          hasHeats = true;
+          parts.push(`
+        <div style="margin:10px 0; padding:10px; border:1px solid #e5e7eb; border-radius:10px;">
+          <div style="font-weight:600">${ev.name || eid}</div>
+          <div class="muted">Heats: ${heats.length}</div>
+          <div style="margin-top:8px">
+            ${heats.map((h, idx) => {
+            const hNo = h.id || h.heatId || (idx + 1);
+            const status = h.status || 'Not Started';
+            return `
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-top:1px solid #f1f5f9;">
+                  <span>#${hNo} • ${status === 'running' ? '<span class="tag" style="background:#eab3081a;border:1px solid #eab308;">Running</span>' : (status === 'done' || status === 'completed' || status === 'finalised'
+                ? '<span class="tag" style="background:#16a34a1a;border:1px solid #16a34a;">Done</span>'
+                : '<span class="tag" style="background:#94a3b81a;border:1px solid #94a3b8;">Not Started</span>')}</span>
+                  <button class="btn" onclick="location.href='run_console.html?cid=${cid}&eid=${encodeURIComponent(eid)}&heat=${encodeURIComponent(hNo)}'">Run Heat</button>
+                </div>`;
+          }).join('')}
+          </div>
+        </div>
+      `);
+        }
+      });
+
+      // Hide card entirely if no heats exist yet
+      if (!hasHeats) {
+        if (card) card.style.display = 'none';
+        if (listEl) listEl.innerHTML = '';
+        return;
+      }
+
+      // Otherwise show the card with populated heats
+      if (card) card.style.display = '';
+      if (listEl) listEl.innerHTML = parts.join('');
+    })();
+
+  </script>
+
+  <script>
+    Core.requireParams(['cid'], 'competition_list.html');
+    // reuse existing cid and events from the first script
+    if (typeof cid === 'undefined') var cid = Core.getParam('cid');
+    const evList = typeof events !== 'undefined' ? events : State.arr(State.keys.events(cid));
+
+    if (evList.length > 0) {
+      const eid = evList[0].eid || evList[0].id || 'E1';
+      document.getElementById('btnEvents').href = Core.buildUrl('event_admin.html', { cid, eid });
+    } else {
+      document.getElementById('btnEvents').textContent = 'No Events Found';
+      document.getElementById('btnEvents').classList.remove('primary');
+    }
+
+  </script>
+
+</body>
+
+</html>

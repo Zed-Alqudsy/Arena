@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Approve Athletes • XGAMES</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* XGAMES ARENA — CSS-ONLY SKIN (Approve Athletes)
+     Paste AFTER /styles.css. One block, complete. No JS/HTML changes required. */
+
+    :root {
+      --blue: #2563eb;
+      --navy: #1e3a8a;
+      --orange: #F37021;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e5e7eb;
+      --soft: #f1f5f9;
+      --btn: #2563eb;
+      --btn-ink: #ffffff;
+      --tag-bg: #eef2ff;
+      --tag-ink: #3730a3;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    /* 1) Blue gradient hero using existing <header> */
+    header {
+      background: linear-gradient(180deg, var(--blue) 0%, var(--navy) 100%) !important;
+      color: #fff !important;
+      padding: 72px 20px 96px !important;
+      text-align: center !important;
+      border: 0 !important;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: .92;
+    }
+
+    /* 2) Floating wrap card under header (for page title + back button) */
+    .wrap {
+      width: 100%;
+      max-width: 960px;
+      margin: -60px auto 40px;
+      position: relative;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-ink);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #e0e7ff;
+    }
+
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      background: var(--btn);
+      color: var(--btn-ink);
+      border: none;
+      transition: .2s;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, .35);
+      transform: translateY(-2px);
+    }
+
+    .btn.secondary {
+      background: var(--soft);
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn.secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* 3) Center main content (existing #content) */
+    main#content {
+      max-width: 960px !important;
+      margin: -16px auto 0 !important;
+      /* small float under card */
+      padding: 0 20px 64px !important;
+    }
+
+    /* 4) Filter & Import bars as soft cards */
+    #fidFilterBar,
+    #importBar {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
+      margin: 12px 0 14px;
+    }
+
+    #fidFilterBar select,
+    #importBar input[type="file"] {
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--line) !important;
+      background: #fff;
+      padding: 0 10px;
+    }
+
+    #btnImport {
+      height: 40px;
+      border-radius: 10px !important;
+      border: 1px solid rgba(0, 0, 0, .06) !important;
+      background: var(--blue) !important;
+      color: #fff !important;
+      font-weight: 700;
+      padding: 0 14px !important;
+      cursor: pointer;
+    }
+
+    /* 5) Tabs (Pending / Approved / Rejected) */
+    #tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 14px 0 16px !important;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .05);
+    }
+
+    #tabs .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px !important;
+      padding: 8px 14px !important;
+      text-decoration: none;
+      border: 1px solid var(--line) !important;
+      background: var(--soft) !important;
+      color: var(--ink) !important;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    #tabs .tab.active {
+      background: #eef2ff !important;
+      color: #3730a3 !important;
+      border-color: #c7d2fe !important;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, .18);
+    }
+
+    /* 6) Panels + Tables */
+    section.panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
+      margin: 14px 0;
+    }
+
+    section.panel p {
+      color: var(--muted);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 12px;
+    }
+
+    section.panel table {
+      width: 100%;
+      border-collapse: separate !important;
+      border-spacing: 0;
+      background: var(--card);
+      border: 1px solid var(--line) !important;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+    }
+
+    section.panel thead {
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    section.panel thead th {
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      padding: 12px 14px !important;
+      white-space: nowrap;
+    }
+
+    section.panel tbody td {
+      padding: 12px 14px !important;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    section.panel tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    @media(hover:hover) {
+      section.panel tbody tr:hover {
+        background: #f9fbff;
+      }
+    }
+
+    /* 7) Pending row controls */
+    section#panel-pending input[type="text"][data-note] {
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--line) !important;
+      background: #fff;
+      padding: 0 10px !important;
+    }
+
+    section#panel-pending [data-approve] {
+      height: 36px;
+      border-radius: 10px;
+      padding: 0 12px !important;
+      border: 1px solid #16a34a !important;
+      background: #16a34a !important;
+      color: #fff !important;
+      font-weight: 700;
+      cursor: pointer;
+      margin-right: 8px !important;
+    }
+
+    section#panel-pending [data-reject] {
+      height: 36px;
+      border-radius: 10px;
+      padding: 0 12px !important;
+      border: 1px solid #ef4444 !important;
+      background: #fff !important;
+      color: #ef4444 !important;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* 8) Empty states */
+    #empty-pending,
+    #empty-approved,
+    #empty-rejected {
+      display: none;
+      padding: 24px !important;
+      border: 1px dashed var(--line) !important;
+      border-radius: 12px !important;
+      background: #f8fafc !important;
+      color: #475569 !important;
+    }
+
+    #empty-pending code,
+    #empty-approved code,
+    #empty-rejected code {
+      background: #0f172a0a;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    /* 9) Footer aligned to content width */
+    footer {
+      max-width: 960px;
+      margin: 40px auto 24px;
+      padding: 0 20px !important;
+      color: #64748b;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px !important;
+      font-size: 14px;
+      background: transparent !important;
+    }
+
+    /* 10) Mobile-first tweaks */
+    @media(max-width:390px) {
+      header {
+        padding: 60px 16px 84px !important;
+      }
+
+      header h1 {
+        font-size: 26px;
+      }
+
+      .wrap {
+        padding: 0 12px;
+      }
+
+      main#content {
+        padding: 0 16px 56px !important;
+      }
+
+      section.panel thead th,
+      section.panel tbody td {
+        padding: 10px 12px !important;
+      }
+
+      #tabs .tab {
+        padding: 8px 12px !important;
+      }
+    }
+
+    /* 11) Desktop widen */
+    @media(min-width:1280px) {
+
+      .wrap,
+      main#content,
+      footer {
+        max-width: 1040px !important;
+      }
+    }
+  </style>
+
+
+  <script src="/shared/core.js"></script>
+  <script src="/shared/ui.js"></script>
+  <script src="/shared/state.js"></script>
+  <script src="/shared/lang.js"></script>
+
+</head>
+
+<body>
+  <header>
+    <h1>✅ Approve Athletes</h1>
+    <p>Review pending athlete registrations and approve or reject them.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <div style="font-size:22px"></div>
+        <h2>Approve Athletes</h2>
+        <span class="tag">Federation</span>
+      </div>
+      <a class="btn secondary" href="/pages/federation_center.html">← Back to Federation Center</a>
+    </div>
+  </div>
+
+
+  <main id="content" style="padding:24px; max-width:1100px; margin:0 auto;">
+    <h1 style="margin:0 0 16px 0;">Athlete Registrations</h1>
+
+    <div id="fidFilterBar" style="display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;">
+      <span>Federation:</span>
+      <select id="fidFilter" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;">
+        <option value="">All</option>
+        <option value="MSF">MSF</option>
+        <option value="ABF">ABF</option>
+      </select>
+    </div>
+
+    <!-- Import toolbar (CSV/JSON) -->
+    <div id="importBar" style="display:flex;align-items:center;gap:8px;margin:8px 0 12px 0;">
+      <input type="file" id="importFile" accept=".csv,.json"
+        style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;">
+      <button id="btnImport"
+        style="padding:8px 12px;border:1px solid #0ea5e9;background:#0ea5e9;color:#fff;border-radius:10px;cursor:pointer;">
+        Import Athletes
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div id="tabs" style="display:flex; gap:8px; margin-bottom:16px;">
+      <button data-tab="pending" class="tab active"
+        style="padding:8px 12px; border:1px solid #0ea5e9; background:#0ea5e9; color:#fff; border-radius:10px; cursor:pointer;">Pending
+        (<span id="cnt-pending">0</span>)</button>
+      <button data-tab="approved" class="tab"
+        style="padding:8px 12px; border:1px solid #cbd5e1; background:#fff;    color:#0f172a; border-radius:10px; cursor:pointer;">Approved
+        (<span id="cnt-approved">0</span>)</button>
+      <button data-tab="rejected" class="tab"
+        style="padding:8px 12px; border:1px solid #cbd5e1; background:#fff;    color:#0f172a; border-radius:10px; cursor:pointer;">Rejected
+        (<span id="cnt-rejected">0</span>)</button>
+    </div>
+
+    <!-- Panels -->
+    <section id="panel-pending" class="panel" style="display:block;">
+      <p style="color:#64748b; margin:0 0 12px 0;">Review details. Click <b>Approve</b> to move into the master
+        registry, or <b>Reject</b> to archive with a note.</p>
+      <div id="empty-pending"
+        style="display:none; padding:24px; border:1px dashed #cbd5e1; border-radius:12px; background:#f8fafc; color:#475569;">
+        No pending registrations in <code>athletes_staging</code>.
+      </div>
+      <div class="table-wrap" style="overflow:auto;">
+        <table
+          style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+          <thead style="background:#f1f5f9;">
+            <tr>
+              <th style="text-align:left; padding:10px 12px;">MSF ID</th>
+              <th style="text-align:left; padding:10px 12px;">Name</th>
+              <th style="text-align:left; padding:10px 12px;">State/District</th>
+              <th style="text-align:left; padding:10px 12px;">Age/Sex</th>
+              <th style="text-align:left; padding:10px 12px;">Nation/Club</th>
+              <th style="text-align:left; padding:10px 12px;">IC (private)</th>
+              <th style="text-align:left; padding:10px 12px; width:220px;">Notes</th>
+              <th style="text-align:left; padding:10px 12px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pendingBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-approved" class="panel" style="display:none;">
+      <div id="empty-approved"
+        style="display:none; padding:24px; border:1px dashed #cbd5e1; border-radius:12px; background:#f8fafc; color:#475569;">
+        No approved athletes in <code>athletes_master</code> yet.
+      </div>
+      <div class="table-wrap" style="overflow:auto;">
+        <table
+          style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+          <thead style="background:#f1f5f9;">
+            <tr>
+              <th style="text-align:left; padding:10px 12px;">MSF ID</th>
+              <th style="text-align:left; padding:10px 12px;">Name</th>
+              <th style="text-align:left; padding:10px 12px;">State/District</th>
+              <th style="text-align:left; padding:10px 12px;">Age/Sex</th>
+              <th style="text-align:left; padding:10px 12px;">Nation/Club</th>
+              <th style="text-align:left; padding:10px 12px;">Approved At</th>
+              <th style="text-align:left; padding:10px 12px;">Note</th>
+            </tr>
+          </thead>
+          <tbody id="approvedBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-rejected" class="panel" style="display:none;">
+      <div id="empty-rejected"
+        style="display:none; padding:24px; border:1px dashed #cbd5e1; border-radius:12px; background:#f8fafc; color:#475569;">
+        No rejected athletes in <code>athletes_rejected</code>.
+      </div>
+      <div class="table-wrap" style="overflow:auto;">
+        <table
+          style="width:100%; border-collapse:collapse; background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+          <thead style="background:#f1f5f9;">
+            <tr>
+              <th style="text-align:left; padding:10px 12px;">MSF ID</th>
+              <th style="text-align:left; padding:10px 12px;">Name</th>
+              <th style="text-align:left; padding:10px 12px;">State/District</th>
+              <th style="text-align:left; padding:10px 12px;">Age/Sex</th>
+              <th style="text-align:left; padding:10px 12px;">Nation/Club</th>
+              <th style="text-align:left; padding:10px 12px;">Rejected At</th>
+              <th style="text-align:left; padding:10px 12px;">Note</th>
+            </tr>
+          </thead>
+          <tbody id="rejectedBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+
+
+  <footer>
+    XGAMES ARENA — Competition Module v1.0
+  </footer>
+
+  <script>
+    (function () {
+      // Keys
+      const K_STAGING = State.keys.athletesStaging;
+      const K_MASTER = State.keys.athletesMaster;
+      const K_REJECT = 'athletes_rejected';
+
+      // Utils
+      const $ = (id) => document.getElementById(id);
+      const lower = s => (s || '').toLowerCase();
+      const toast = (msg, ok = true) => (window.UI && UI.toast) ? UI.toast(msg, ok ? 'success' : 'error') : alert(msg);
+
+      const getFID = () => {
+        const el = document.getElementById('fidFilter');
+        return el ? String(el.value || '').toUpperCase() : '';
+      };
+
+      const normalizeNation = (nation) => {
+        if (!nation) return 'MAS';
+        const n = nation.trim();
+        if (lower(n) === 'malaysia' || lower(n) === 'mas') return 'MAS';
+        return n.toUpperCase();
+      };
+      const titleCase = (s) => (s || '').replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
+      const nsidRegex = /^NSID-[A-Z]{2,8}-\d{4}-\d{5}$/;
+      const ensureNSID = (rec) => {
+        let { nsid, fid } = rec;
+        fid = (fid || 'MSF').toUpperCase();
+        if (nsidRegex.test(nsid || '')) return nsid;
+        const year = String(new Date().getFullYear());
+        const CURSOR_KEY = `nsid_cursor_${fid}`;
+        const cur = Number(localStorage.getItem(CURSOR_KEY) || '0') + 1;
+        localStorage.setItem(CURSOR_KEY, String(cur));
+        return `NSID-${fid}-${year}-${String(cur).padStart(5, '0')}`;
+      };
+
+      // Tab switching
+      document.querySelectorAll('#tabs .tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#tabs .tab').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = '#fff';
+            b.style.color = '#0f172a';
+            b.style.border = '1px solid #cbd5e1';
+          });
+          btn.classList.add('active');
+          btn.style.background = '#0ea5e9';
+          btn.style.color = '#fff';
+          btn.style.border = '1px solid #0ea5e9';
+
+          const target = btn.getAttribute('data-tab');
+          document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+          document.getElementById('panel-' + target).style.display = 'block';
+        });
+      });
+
+      const fidSel = document.getElementById('fidFilter');
+      if (fidSel) fidSel.addEventListener('change', loadAll);
+
+
+      function counts(pending, approved, rejected) {
+        $('cnt-pending').textContent = pending.length;
+        $('cnt-approved').textContent = approved.length;
+        $('cnt-rejected').textContent = rejected.length;
+      }
+
+      function loadAll() {
+        let staging = State.arr(K_STAGING);
+        let approved = State.arr(K_MASTER);
+        let rejected = State.arr(K_REJECT);
+
+
+        const fidFilter = getFID();
+        if (fidFilter) {
+          staging = staging.filter(a => (a.fid || '').toUpperCase() === fidFilter);
+          approved = approved.filter(a => (a.fid || '').toUpperCase() === fidFilter);
+          rejected = rejected.filter(a => (a.fid || '').toUpperCase() === fidFilter);
+        }
+
+        counts(staging, approved, rejected);
+
+        renderPending(staging);
+        renderApproved(approved);
+        renderRejected(rejected);
+      }
+      window.loadAll = loadAll;
+
+
+      function renderPending(list) {
+        const body = $('pendingBody');
+        const empty = $('empty-pending');
+        body.innerHTML = '';
+
+        if (!list.length) { empty.style.display = 'block'; return; }
+        empty.style.display = 'none';
+
+        list.forEach((a, idx) => {
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #f1f5f9';
+
+          tr.innerHTML = `
+        <td style="padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">${a.nsid || '<i>(auto)</i>'}</td>
+        <td style="padding:10px 12px;">${a.name || ''}</td>
+        <td style="padding:10px 12px;">${a.state || ''} / ${a.district || ''}</td>
+        <td style="padding:10px 12px;">${(a.age ?? State.computeAge(a.dob) ?? '')} / ${a.sex || ''}</td>
+        <td style="padding:10px 12px;">${normalizeNation(a.nation)} / ${a.club || ''}</td>
+        <td style="padding:10px 12px;">${a.national_id || ''}</td>
+        <td style="padding:10px 12px;">
+          <input data-note="${idx}" type="text" placeholder="Optional note"
+                 style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px;">
+        </td>
+        <td style="padding:10px 12px;">
+          <button data-approve="${idx}" style="padding:8px 10px; border:1px solid #16a34a; background:#16a34a; color:#fff; border-radius:10px; cursor:pointer; margin-right:8px;">Approve</button>
+          <button data-reject="${idx}"  style="padding:8px 10px; border:1px solid #ef4444; background:#fff;    color:#ef4444; border-radius:10px; cursor:pointer;">Reject</button>
+        </td>
+      `;
+          body.appendChild(tr);
+        });
+
+        body.querySelectorAll('[data-approve]').forEach(btn => {
+          btn.addEventListener('click', () => approveIdx(Number(btn.getAttribute('data-approve'))));
+        });
+        body.querySelectorAll('[data-reject]').forEach(btn => {
+          btn.addEventListener('click', () => rejectIdx(Number(btn.getAttribute('data-reject'))));
+        });
+      }
+
+      function renderApproved(list) {
+        const body = $('approvedBody');
+        const empty = $('empty-approved');
+        body.innerHTML = '';
+
+        if (!list.length) { empty.style.display = 'block'; return; }
+        empty.style.display = 'none';
+
+        list.forEach(a => {
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #f1f5f9';
+          tr.innerHTML = `
+        <td style="padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">${a.nsid || ''}</td>
+        <td style="padding:10px 12px;">${a.name || ''}</td>
+        <td style="padding:10px 12px;">${a.state || ''} / ${a.district || ''}</td>
+        <td style="padding:10px 12px;">${(a.age ?? '')} / ${a.sex || ''}</td>
+        <td style="padding:10px 12px;">${normalizeNation(a.nation)} / ${a.club || ''}</td>
+        <td style="padding:10px 12px;">${a.approvedAt ? new Date(a.approvedAt).toLocaleString() : ''}</td>
+        <td style="padding:10px 12px;">${a.approval_note || ''}</td>
+      `;
+          body.appendChild(tr);
+        });
+      }
+
+      function renderRejected(list) {
+        const body = $('rejectedBody');
+        const empty = $('empty-rejected');
+        body.innerHTML = '';
+
+        if (!list.length) { empty.style.display = 'block'; return; }
+        empty.style.display = 'none';
+
+        list.forEach(a => {
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #f1f5f9';
+          tr.innerHTML = `
+        <td style="padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">${a.nsid || ''}</td>
+        <td style="padding:10px 12px;">${a.name || ''}</td>
+        <td style="padding:10px 12px;">${a.state || ''} / ${a.district || ''}</td>
+        <td style="padding:10px 12px;">${(a.age ?? State.computeAge(a.dob) ?? '')} / ${a.sex || ''}</td>
+        <td style="padding:10px 12px;">${normalizeNation(a.nation)} / ${a.club || ''}</td>
+        <td style="padding:10px 12px;">${a.rejectedAt ? new Date(a.rejectedAt).toLocaleString() : ''}</td>
+        <td style="padding:10px 12px;">${a.rejection_note || ''}</td>
+      `;
+          body.appendChild(tr);
+        });
+      }
+
+      function noteFor(idx) {
+        const input = document.querySelector(`input[data-note="${idx}"]`);
+        return (input && input.value.trim()) ? input.value.trim() : '';
+      }
+
+      function removeStaging(idx) {
+        const staging = State.arr(K_STAGING);
+        staging.splice(idx, 1);
+        State.setJSON(K_STAGING, staging);
+      }
+
+      function approveIdx(idx) {
+        const staging = State.arr(K_STAGING);
+        const rec = staging[idx];
+        if (!rec) return;
+
+        const fid = (rec.fid || 'MSF').toUpperCase();
+        const nsid = ensureNSID(rec);
+        const master = State.arr(K_MASTER);
+        const exists = master.some(m => lower(m.nsid) === lower(nsid));
+        if (exists) { removeStaging(idx); toast('Already approved earlier. Removed from pending.'); return; }
+
+        const masterItem = {
+          nsid,
+          fid,
+          name: rec.name || '',
+          nation: normalizeNation(rec.nation),
+          state: titleCase(rec.state),
+          district: titleCase(rec.district),
+          dob: rec.dob,
+          age: rec.age ?? State.computeAge(rec.dob),
+          sex: (rec.sex || '').toUpperCase() === 'F' ? 'F' : 'M',
+          club: rec.club || '',
+          contact: rec.contact || '',
+          national_id: rec.national_id || '', // stays private in master
+          createdAt: rec.createdAt || new Date().toISOString(),
+          approvedAt: new Date().toISOString(),
+          approval_note: noteFor(idx)
+        };
+
+        master.push(masterItem);
+        State.setJSON(K_MASTER, master);
+        removeStaging(idx);
+        State.bumpTick(State.keys.tickAthletesMaster);
+        toast(`Approved: ${nsid}`);
+        loadAll();
+      }
+
+      function rejectIdx(idx) {
+        const staging = State.arr(K_STAGING);
+        const rec = staging[idx];
+        if (!rec) return;
+
+        const rejected = State.arr(K_REJECT);
+        rejected.push({
+          ...rec,
+          rejectedAt: new Date().toISOString(),
+          rejection_note: noteFor(idx)
+        });
+        State.setJSON(K_REJECT, rejected);
+        removeStaging(idx);
+        toast('Rejected and archived.');
+        loadAll();
+      }
+
+      // Initial render
+      loadAll();
+    })();
+  </script>
+
+  <script>
+    /* ===== Import Athletes (CSV/JSON) — writes to athletes_staging =====
+       Contract: records must match the staging shape:
+       nsid, fid, name, nation, state, district, dob, age, sex, club, contact, national_id, createdAt
+       - NSID may be blank; federation approval will auto-generate.
+       - We de-dupe by NSID (case-insensitive), fallback by name|club.
+       - After write, we bump athletes_master_tick so Pending tab refreshes.
+    */
+
+    (function setupImportToolbar() {
+      const fileEl = document.getElementById('importFile');
+      const btn = document.getElementById('btnImport');
+      if (!fileEl || !btn) return;
+
+      btn.addEventListener('click', async () => {
+        if (!fileEl.files || !fileEl.files[0]) {
+          alert('Choose a .csv or .json file first.');
+          return;
+        }
+
+        // Visual feedback
+        const oldLabel = btn.textContent;
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.textContent = "Importing...";
+
+        try {
+
+          const text = await fileEl.files[0].text();
+          const isJSON = /\.json$/i.test(fileEl.files[0].name.trim()) || text.trim().startsWith('[');
+          const rows = isJSON ? parseJSON(text) : parseCSV(text);
+
+          const cleaned = rows
+            .map(sanitizeRecord)
+            .filter(Boolean);
+
+          const staged = importToStaging(cleaned);
+
+          // Refresh UI (your page’s existing refresh function)
+          // NEW
+          forcePendingRefresh();
+
+
+
+          // Optional toast if you have UI.toast on this page
+          if (window.UI && typeof UI.toast === 'function') {
+            UI.toast(`Imported ${staged.added} new / ${staged.skipped} skipped (duplicates)`);
+          } else {
+            alert(`Imported ${staged.added} new / ${staged.skipped} skipped`);
+          }
+
+          // clear file input
+          fileEl.value = '';
+
+        } catch (e) {
+          console.error(e);
+          alert('Import failed. Check file format.');
+        }
+        // Reset button state
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.textContent = oldLabel;
+
+      });
+
+      function parseJSON(text) {
+        const arr = JSON.parse(text);
+        return Array.isArray(arr) ? arr : [];
+      }
+
+      function parseCSV(text) {
+        // very small CSV helper (comma-separated, header line)
+        const lines = text.replace(/\r/g, '').split('\n').filter(Boolean);
+        if (!lines.length) return [];
+        const headers = lines[0].split(',').map(h => h.trim());
+        const want = ['nsid', 'fid', 'name', 'nation', 'state', 'district', 'dob', 'age', 'sex', 'club', 'contact', 'national_id', 'createdAt'];
+        // map header indexes
+        const idx = Object.fromEntries(want.map(k => [k, headers.findIndex(h => h.toLowerCase() === k)]));
+        return lines.slice(1).map(line => {
+          const cells = line.split(',').map(c => c.trim());
+          const rec = {};
+          want.forEach(k => {
+            rec[k] = idx[k] >= 0 ? cells[idx[k]] : '';
+          });
+          return rec;
+        });
+      }
+
+      function sanitizeRecord(r) {
+        // minimal normalization; approval page will enforce full normalization again
+        if (!r) return null;
+        const out = {
+          nsid: String(r.nsid || '').trim(),          // may be blank
+          fid: String(r.fid || 'MSF').trim().toUpperCase(),
+          name: String(r.name || '').trim(),
+          nation: String(r.nation || 'MAS').trim().toUpperCase(),
+          state: String(r.state || '').trim(),
+          district: String(r.district || '').trim(),
+          dob: String(r.dob || '').trim(),
+          age: Number(r.age || '') || null,           // can be null; approval can recompute
+          sex: (String(r.sex || '').trim().toUpperCase() === 'F') ? 'F' : 'M',
+          club: String(r.club || '').trim(),
+          contact: String(r.contact || '').trim(),
+          national_id: String(r.national_id || '').trim(), // stays private (staging/master only)
+          createdAt: String(r.createdAt || new Date().toISOString())
+        };
+        // minimal required fields for staging
+        if (!out.name || !out.state || !out.district || !out.sex) return null;
+        return out;
+      }
+
+      function importToStaging(list) {
+        const K = State.keys;
+        const stagingKey = K.athletesStaging;  // 'athletes_staging'
+        const masterKey = K.athletesMaster;   // 'athletes_master'
+
+        const staging = State.arr(stagingKey);
+        const master = State.arr(masterKey);
+
+        let added = 0, skipped = 0;
+
+        const existsNSID = new Set(
+          [...staging, ...master]
+            .map(x => String(x.nsid || '').trim().toLowerCase())
+            .filter(Boolean)
+        );
+
+        const makeNameClub = x => (String(x.name || '') + '|' + String(x.club || '')).toLowerCase();
+
+        const existsNameClub = new Set(
+          staging.map(makeNameClub)
+        );
+
+        const out = staging.slice();
+
+        for (const rec of list) {
+          const ns = (rec.nsid || '').trim().toLowerCase();
+          if (ns && existsNSID.has(ns)) { skipped++; continue; }
+
+          const nc = makeNameClub(rec);
+          if (!ns && existsNameClub.has(nc)) { skipped++; continue; }
+
+          out.push(rec);
+          if (ns) existsNSID.add(ns);
+          existsNameClub.add(nc);
+          added++;
+        }
+
+        State.setJSON(stagingKey, out);
+        // bump tick so UI updates (your pages already watch this)
+        State.bumpTick(K.tickAthletesMaster);
+
+        return { added, skipped };
+      }
+
+      function forcePendingRefresh() {
+        if (typeof loadAll === 'function') {
+          loadAll();                     // immediate
+          requestAnimationFrame(loadAll); // next frame
+          setTimeout(loadAll, 120);       // slight delay (handles async file read/write)
+        }
+      }
+
+    })();
+  </script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,548 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Approve Competition Entries • XGAMES</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* XGAMES ARENA — CSS-ONLY SKIN (Approve Competition Entries)
+     Paste AFTER /styles.css. No JS changes. */
+
+    :root {
+      --blue: #2563eb;
+      --navy: #1e3a8a;
+      --orange: #F37021;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e5e7eb;
+      --soft: #f1f5f9;
+      --btn: #2563eb;
+      --btn-ink: #ffffff;
+      --tag-bg: #eef2ff;
+      --tag-ink: #3730a3;
+    }
+
+    body {
+      background: var(--bg) !important;
+      color: var(--ink);
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* 1) Blue gradient hero */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      color: #fff;
+      padding: 60px 20px 100px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      font-size: 1.05rem;
+      opacity: .92;
+    }
+
+    /* 2) Floating wrap card (title + back) */
+    .wrap {
+      width: 100%;
+      max-width: 960px;
+      margin: -60px auto 40px;
+      position: relative;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-ink);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #e0e7ff;
+    }
+
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      background: var(--btn);
+      color: var(--btn-ink);
+      border: none;
+      transition: .2s;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, .35);
+      transform: translateY(-2px);
+    }
+
+    .btn.secondary {
+      background: var(--soft);
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn.secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    /* 3) Constrain main content to same width */
+    main {
+      max-width: 960px !important;
+      margin: 0 auto;
+      padding: 0 16px 56px !important;
+    }
+
+    /* 4) Card sections */
+    section.card {
+      background: var(--card) !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 16px !important;
+      padding: 18px 20px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+    }
+
+    section.card+section.card {
+      margin-top: 16px !important;
+    }
+
+    /* 5) Rows / small layout helpers used by JS templates */
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* 6) Inputs & buttons inside forms and toolbars */
+    input[type="text"],
+    input[type="search"],
+    input[placeholder],
+    input:not([type]),
+    select {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      transition: .2s;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    input[type="search"]:focus,
+    select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
+      outline: none;
+    }
+
+    #addForm input {
+      flex: 1 1 200px;
+      min-width: 180px;
+    }
+
+    #add_btn,
+    #approve,
+    #remove,
+    button[data-add] {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid rgba(0, 0, 0, .06);
+      background: var(--blue);
+      color: #fff;
+    }
+
+    #remove {
+      background: #fff;
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+
+    button[data-add] {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+
+    /* 7) Search results list */
+    #results .row {
+      justify-content: space-between;
+    }
+
+    #results .row>div:first-child b {
+      font-weight: 700;
+    }
+
+    #results input[placeholder="Category"] {
+      width: 220px;
+      max-width: 100%;
+    }
+
+    /* 8) Staging table */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    table thead {
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      border: 1px solid var(--line);
+      border-bottom: none;
+      overflow: hidden;
+    }
+
+    table thead th {
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      padding: 12px 14px;
+      white-space: nowrap;
+    }
+
+    table tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+      background: #fff;
+    }
+
+    table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    @media(hover:hover) {
+      table tbody tr:hover td {
+        background: #f9fbff;
+      }
+    }
+
+    table input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* 9) Controls under table */
+    [id="approve"],
+    [id="remove"] {
+      min-width: 150px;
+    }
+
+    #op {
+      margin-left: 6px;
+    }
+
+    /* 10) Footer (if present on this page later) */
+    footer {
+      max-width: 960px;
+      margin: 40px auto 24px;
+      padding: 0 20px !important;
+      color: #64748b;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px !important;
+      font-size: 14px;
+      background: transparent !important;
+    }
+
+    /* 11) Mobile tweaks */
+    @media(max-width:390px) {
+      header {
+        padding: 52px 16px 84px;
+      }
+
+      header h1 {
+        font-size: 26px;
+      }
+
+      .wrap {
+        padding: 0 12px;
+      }
+
+      section.card {
+        padding: 16px !important;
+      }
+
+      table thead th,
+      table tbody td {
+        padding: 10px 12px;
+      }
+    }
+
+    /* 12) Desktop widen */
+    @media(min-width:1280px) {
+
+      .wrap,
+      main,
+      footer {
+        max-width: 1040px !important;
+      }
+    }
+  </style>
+
+  <script src="/shared/core.js"></script>
+  <script src="/shared/ui.js"></script>
+  <script src="/shared/state.js"></script>
+  <script src="/shared/lang.js"></script>
+
+</head>
+
+<body>
+  <header>
+    <h1>✅ Approve Competition Entries</h1>
+    <p>Search federation athletes, stage entries, and publish to the event roster.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <div style="font-size:22px"></div>
+        <h2>Approve Competition Entries</h2>
+        <span class="tag">Federation</span>
+      </div>
+      <a class="btn secondary" href="/pages/federation_center.html">← Back to Federation Center</a>
+    </div>
+  </div>
+
+  <main style="max-width:1100px;margin:24px auto;padding:16px">
+    <h1>Competition Entries</h1>
+
+    <section class="card" style="padding:16px;margin-bottom:16px">
+      <h3>Add by NSID</h3>
+      <form id="addForm" class="row" onsubmit="return false;">
+        <input id="add_nsid" placeholder="NSID-MSF-2025-00001" required>
+        <input id="add_cat" placeholder="Category e.g. Street Open Men" required>
+        <input id="add_note" placeholder="Note (optional)">
+        <button id="add_btn">Add to Staging</button>
+      </form>
+      <p id="add_msg" class="muted" style="margin-top:8px"></p>
+    </section>
+
+    <section class="card" style="padding:16px;margin-bottom:16px">
+      <h3>Search Federation Athletes</h3>
+      <input id="q" placeholder="Search name/nsid/state/district/sex/fid" style="width:100%;margin-bottom:8px">
+      <div id="results"></div>
+    </section>
+
+    <section class="card" style="padding:16px">
+      <h3>Staging Entries <small id="cnt"></small></h3>
+      <table style="width:100%">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="toggle_all"></th>
+            <th>NSID</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button id="approve">Approve → Publish</button>
+        <button id="remove">Remove</button>
+        <span id="op" class="muted"></span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const toast = (m, ok = true) => (window.UI && UI.toast) ? UI.toast(m) : alert(m);
+      const cid = Core.getParam('cid');
+      if (!cid) { toast('Missing ?cid', false); return; }
+
+      const K = State.keys;
+      const KEY_ENTRIES = K.entriesStaging(cid);      // entries_staging_<CID>
+      const KEY_PUB = K.athletes(cid);            // athletes_<CID>
+      const KEY_CURSOR = K.athletesAidCursor(cid);   // athletes_aid_cursor_<CID>
+      const KEY_TICK = K.tickAthletesCID(cid);     // athletes_tick_<CID>
+
+      const $ = (id) => document.getElementById(id);
+      const lower = (s) => String(s || '').toLowerCase();
+
+      const master = () => State.arr(K.athletesMaster);
+      const entries = () => State.arr(KEY_ENTRIES);
+      const published = () => State.arr(KEY_PUB);
+
+      // ---- Add to staging (from NSID) ----
+      const addToStaging = (nsid, category, note = '') => {
+        nsid = String(nsid || '').trim().toUpperCase();
+        if (!nsid) return 'NSID required.';
+        if (!master().some(a => String(a.nsid || '').toUpperCase() === nsid)) return 'NSID not in federation master.';
+        const curr = entries();
+        if (curr.some(r => String(r.nsid || '').toUpperCase() === nsid)) return 'Already in staging.';
+        curr.push({ nsid, category: String(category || '').trim(), note: String(note || '').trim(), createdAt: new Date().toISOString() });
+        State.setJSON(KEY_ENTRIES, curr);
+        State.bumpTick(KEY_TICK);
+        renderStaging();
+        return 'Added.';
+      };
+
+      // ---- Search master ----
+      const renderSearch = () => {
+        const q = lower($('q').value);
+        const rows = master().filter(a => {
+          const hay = [a.name, a.nsid, a.state, a.district, a.sex, a.fid].map(x => lower(x)).join(' ');
+          return !q || hay.includes(q);
+        }).slice(0, 50);
+        $('results').innerHTML = rows.map(a => `
+        <div class="row" style="align-items:center;margin-bottom:6px">
+          <div><b>${a.name}</b> <small>${a.nsid}</small> · ${a.sex} · ${a.state}/${a.district} · ${a.fid || 'MSF'}</div>
+          <div>
+            <input placeholder="Category" data-c-for="${a.nsid}" style="width:220px">
+            <button data-add="${a.nsid}">Add</button>
+          </div>
+        </div>
+      `).join('');
+        document.querySelectorAll('button[data-add]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const nsid = btn.getAttribute('data-add');
+            const cat = (document.querySelector(`input[data-c-for="${nsid}"]`)?.value || '').trim();
+            $('op').textContent = addToStaging(nsid, cat);
+          });
+        });
+      };
+
+      // ---- Staging table ----
+      const nameByNSID = (nsid) => {
+        const m = master().find(a => String(a.nsid || '').toUpperCase() === String(nsid || '').toUpperCase());
+        return m ? m.name : '—';
+      };
+      const renderStaging = () => {
+        const rows = entries();
+        $('cnt').textContent = `(${rows.length})`;
+        $('tbody').innerHTML = rows.map((r, i) => `
+        <tr>
+          <td><input type="checkbox" data-row="${i}"></td>
+          <td>${r.nsid}</td>
+          <td>${nameByNSID(r.nsid)}</td>
+          <td>${r.category || '—'}</td>
+          <td>${r.note || '—'}</td>
+          <td><small>${new Date(r.createdAt).toLocaleString()}</small></td>
+        </tr>
+      `).join('');
+      };
+
+      // ---- Approve → publish athletes_<CID> with AID (no national_id) ----
+      const approveSelected = () => {
+        const checks = [...document.querySelectorAll('input[type="checkbox"][data-row]:checked')];
+        if (!checks.length) { $('op').textContent = 'No rows selected.'; return; }
+
+        const curr = entries();
+        let pub = published();
+        let cursor = Number(localStorage.getItem(KEY_CURSOR) || '0');
+
+        let approved = 0;
+        checks.forEach(chk => {
+          const idx = Number(chk.getAttribute('data-row'));
+          const ent = curr[idx]; if (!ent) return;
+
+          if (pub.some(p => lower(p.nsid) === lower(ent.nsid))) return; // already published
+
+          const src = master().find(a => lower(a.nsid) === lower(ent.nsid));
+          if (!src) return;
+
+          cursor += 1;
+          const aid = `A${cursor}`;
+          const rec = {
+            aid,
+            nsid: src.nsid,
+            name: src.name,
+            nation: src.nation,   // normalized earlier in approval flow
+            state: src.state,
+            district: src.district,
+            sex: src.sex,
+            club: src.club,
+            category: ent.category || ''
+          }; // NO national_id here
+          pub.push(rec);
+          approved++;
+        });
+
+        State.setJSON(KEY_PUB, pub);
+        localStorage.setItem(KEY_CURSOR, String(cursor));
+        State.bumpTick(KEY_TICK);
+
+        // remove approved from staging
+        const keep = curr.filter(ent => !pub.some(p => lower(p.nsid) === lower(ent.nsid)));
+        State.setJSON(KEY_ENTRIES, keep);
+
+        renderStaging();
+        $('op').textContent = approved ? `Approved ${approved} entr${approved > 1 ? 'ies' : 'y'} → published.` : 'Nothing approved.';
+      };
+
+      const removeSelected = () => {
+        const checks = [...document.querySelectorAll('input[type="checkbox"][data-row]:checked')];
+        if (!checks.length) { $('op').textContent = 'No rows selected.'; return; }
+        const idxs = new Set(checks.map(c => Number(c.getAttribute('data-row'))));
+        const curr = entries().filter((_, i) => !idxs.has(i));
+        State.setJSON(KEY_ENTRIES, curr);
+        State.bumpTick(KEY_TICK);
+        renderStaging();
+        $('op').textContent = 'Removed from staging.';
+      };
+
+      // events
+      $('q').addEventListener('input', renderSearch);
+      $('toggle_all').addEventListener('change', (e) => {
+        const on = e.target.checked;
+        document.querySelectorAll('input[type="checkbox"][data-row]').forEach(cb => cb.checked = on);
+      });
+      $('approve').addEventListener('click', approveSelected);
+      $('remove').addEventListener('click', removeSelected);
+      $('add_btn').addEventListener('click', () => {
+        $('add_msg').textContent = addToStaging($('add_nsid').value, $('add_cat').value, $('add_note').value);
+        if ($('add_msg').textContent.startsWith('Added')) { $('addForm').reset(); }
+      });
+
+      // init
+      renderSearch();
+      renderStaging();
+    })();
+  </script>
+</body>
+
+</html>

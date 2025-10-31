@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Malaysia Skate Federation — Homepage (Mockup)</title>
+  <style>
+    :root {
+      --black: #000000;
+      --orange: #F37021;
+      --white: #ffffff;
+      --grey: #d9d9d9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, 'Helvetica Neue', Arial, sans-serif;
+      background: #000;
+      color: var(--white);
+    }
+
+    a {
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #000;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand img {
+      height: 40px;
+      width: 40px;
+      border-radius: 50%;
+    }
+
+    .brand .title {
+      font-weight: 800;
+      letter-spacing: .6px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      opacity: .9;
+      font-weight: 600;
+    }
+
+    .login-btn {
+      padding: 10px 14px;
+      border: 1px solid var(--grey);
+      border-radius: 10px;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      /* full screen height */
+      background: none;
+      display: flex;
+      align-items: flex-end;
+      /* keep text lower */
+      justify-content: center;
+      color: white;
+      text-align: center;
+    }
+
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url('assets/img/img_0008_303533a415fe.webp');
+      background-size: cover;
+      background-position: center -160px;
+      filter: brightness(.9);
+      z-index: 0;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, .1) 0%, rgba(0, 0, 0, .85) 68%);
+      z-index: 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      padding: 64px 0;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: .2em;
+      opacity: .85;
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    .hero h1 {
+      margin: .3em 0 .4em;
+      font-size: clamp(28px, 5vw, 56px);
+      line-height: 1.06;
+    }
+
+    .hero p {
+      max-width: 780px;
+      opacity: .9;
+      font-size: clamp(15px, 1.6vw, 18px);
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .btn-orange {
+      background: var(--orange);
+      color: #000;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+    }
+
+    .btn-ghost {
+      border: 1px solid rgba(255, 255, 255, .3);
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    section {
+      padding: 88px 0 64px;
+    }
+
+    section .section-title {
+      font-size: clamp(22px, 3.6vw, 32px);
+      font-weight: 900;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar {
+      width: 48px;
+      height: 4px;
+      background: var(--orange);
+      border-radius: 2px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .grid-3 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .poster {
+      background: #111;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .poster-img {
+      aspect-ratio: 3/4;
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .poster-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #0d0d0d;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .chip {
+      font-size: .75rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(243, 112, 33, .15);
+      color: var(--orange);
+      font-weight: 800;
+      border: 1px solid rgba(243, 112, 33, .4);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+    }
+
+    .btn-sm {
+      font-size: .85rem;
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+
+    .ghost {
+      border: 1px solid rgba(255, 255, 255, .25);
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .video-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .video-wrap {
+      position: relative;
+      padding-top: 56.25%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .video-wrap iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .ath-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .ath-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ath-card {
+      position: relative;
+      height: 340px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .ath-card .bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.9);
+      /* remove blur, keep slight darkening */
+    }
+
+
+    .ath-card .fg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, .75) 100%);
+    }
+
+    .ath-card .meta {
+      padding: 16px;
+    }
+
+    .ath-card .name {
+      font-weight: 900;
+      font-size: 1.15rem;
+    }
+
+    .ath-card .sub {
+      opacity: .85;
+      font-size: .9rem;
+    }
+
+    .rank-wrap {
+      background: #0f0f0f;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      text-align: left;
+    }
+
+    th {
+      background: #0b0b0b;
+      font-size: .9rem;
+      opacity: .8;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    tr:hover td {
+      background: #0b0b0b;
+    }
+
+    .partners {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      opacity: .9;
+    }
+
+    .partners img {
+      height: 44px;
+      border-radius: 50%;
+      background: #fff;
+      padding: 6px;
+    }
+
+    footer {
+      padding: 40px 0 60px;
+      background: #000;
+      color: #bbb;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .small {
+      font-size: .9rem;
+      opacity: .9;
+    }
+
+    .ath-grid .ath-card:nth-child(3) .bg {
+      background-position: center 1%;
+    }
+
+    /* unified evolution style */
+    section {
+      position: relative;
+      padding: 96px 0 72px;
+      overflow: hidden;
+    }
+
+    /* Hero stays as-is — orange from top handled there */
+
+    /* 1️⃣ subtle dark wave */
+    .section--shadeA {
+      background: linear-gradient(180deg, #0b0b0b 0%, #0e0e0e 60%, #0a0a0a 100%);
+    }
+
+    /* 2️⃣ mid wave with faint orange energy glow */
+    .section--shadeB {
+      background:
+        radial-gradient(1000px 400px at 50% -200px, rgba(243, 112, 33, 0.18), transparent 70%),
+        linear-gradient(180deg, #0c0c0c 0%, #0f0f0f 100%);
+    }
+
+    /* 3️⃣ deeper energy build-up */
+    .section--shadeC {
+      background:
+        radial-gradient(1200px 600px at 50% 0px, rgba(243, 112, 33, 0.25), transparent 80%),
+        linear-gradient(180deg, #0d0d0d 0%, #0a0a0a 100%);
+    }
+
+    /* Remove any old dividers completely */
+    .section--divider::before {
+      content: none;
+    }
+
+    /* soft orange wave fade at bottom of every section */
+    section:not(.hero)::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 180px;
+      background: radial-gradient(800px 200px at 50% 100%, rgba(243, 112, 33, 0.12), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <img decoding="async" loading="lazy" src="assets/img/img_0001_6bffb6f84021.webp" alt="MYSkate logo">
+        <div class="title">MALAYSIA SKATE FEDERATION</div>
+      </div>
+      <nav class="nav-links">
+        <a href="#">Home</a>
+        <a href="#events">Competitions</a>
+        <a href="#rankings">Rankings</a>
+        <a href="#videos">Videos</a>
+        <a href="#athletes">Athletes</a>
+        <a href="#partners">Partners</a>
+      </nav>
+      <a class="login-btn" href="#">Login ▾</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="eyebrow">Malaysia Skate Federation</div>
+      <h1>One Federation. One Nation. One Platform.</h1>
+      <p>We unite Malaysia’s skating community — athletes, coaches, and fans — to grow the sport through excellence,
+        inclusion, and passion. Our mission is to build champions and inspire the next generation on wheels.</p>
+      <div class="cta-row">
+        <a class="btn-orange" href="#events">Join the Federation</a>
+        <a class="btn-ghost" href="#">Login Portal ▾</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="events" class="section--shadeA section--divider">
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>Upcoming Competitions</div>
+      <div class="grid-3" style="margin-top:22px;">
+
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/img_0002_0b3422d9ece9.webp"
+            alt="Competition poster">
+          <div class="poster-meta">
+            <div>Event</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/img_0003_1e13fb02a448.webp"
+            alt="Competition poster">
+          <div class="poster-meta">
+            <div>Event</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/img_0004_449ceb788fde.webp"
+            alt="Competition poster">
+          <div class="poster-meta">
+            <div>Event</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/img_0005_08473c423c6f.webp"
+            alt="Competition poster">
+          <div class="poster-meta">
+            <div>Event</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/img_0006_017bef69f737.webp"
+            alt="Competition poster">
+          <div class="poster-meta">
+            <div>Event</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+        <article class="poster">
+          <img decoding="async" loading="lazy" class="poster-img" src="assets/img/skate-bukit.webp"
+            alt="Skate Bukit Gathering Poster">
+          <div class="poster-meta">
+            <div>Skate Bukit Gathering</div>
+            <span class="chip">Open</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn-sm ghost" href="#">Details</a>
+            <a class="btn-sm btn-orange" href="#">Register</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RANKINGS (Orange Leaderboard v2) ===================== -->
+  <section id="rankings" class="section--shadeB section--divider">
+    <style>
+      /* Scoped to #rankings only */
+      #rankings .board-wrap {
+        position: relative;
+        margin-top: 18px;
+      }
+
+      #rankings .board-line {
+        height: 3px;
+        background: var(--orange);
+        opacity: .9;
+      }
+
+      #rankings .board {
+        background: #0c0c0c;
+        border: 1px solid rgba(255, 255, 255, .10);
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+        overflow: hidden;
+      }
+
+      /* Top chips (categories) */
+      #rankings .chips {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 2px 2px 10px;
+      }
+
+      #rankings .chip-tab {
+        font-weight: 900;
+        font-size: .9rem;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, .18);
+        background: #0e0e0e;
+        opacity: .95;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      #rankings .chip-tab--active {
+        border-color: rgba(243, 112, 33, .6);
+        box-shadow: 0 0 0 2px rgba(243, 112, 33, .18) inset;
+      }
+
+      /* Header row (labels) */
+      #rankings .hdr {
+        display: grid;
+        grid-template-columns: 56px 44px 1.2fr .7fr .6fr .7fr .6fr;
+        gap: 12px;
+        padding: 6px 10px 8px;
+        color: #bbb;
+        font-size: .78rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      #rankings .hdr div {
+        opacity: .85;
+      }
+
+      /* Data row */
+      #rankings .row {
+        display: grid;
+        grid-template-columns: 56px 44px 1.2fr .7fr .6fr .7fr .6fr;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 10px;
+        margin: 6px 0;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .06);
+        background: #0e0e0e;
+        transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      #rankings .row:hover {
+        transform: translateY(-1px);
+        border-color: rgba(243, 112, 33, .35);
+        box-shadow: 0 6px 14px rgba(243, 112, 33, .12);
+      }
+
+      #rankings .rank-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(243, 112, 33, .15);
+        color: var(--orange);
+        font-weight: 900;
+        font-size: 1rem;
+        border: 1px solid rgba(243, 112, 33, .45);
+      }
+
+      #rankings .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+        border: 2px solid rgba(255, 255, 255, .22);
+      }
+
+      #rankings .name {
+        font-weight: 900;
+        letter-spacing: .2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #rankings .state {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        opacity: .9;
+      }
+
+      #rankings .flag {
+        width: 38px;
+        /* increase from 16px */
+        height: 26px;
+        /* increase from 12px */
+        border-radius: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        object-fit: cover;
+        margin-right: 6px;
+        /* spacing from text */
+        vertical-align: middle;
+      }
+
+
+      #rankings .events {
+        opacity: .95;
+        font-weight: 800;
+      }
+
+      #rankings .cat {
+        font-weight: 900;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #111;
+        border: 1px solid rgba(255, 255, 255, .14);
+      }
+
+      #rankings .points {
+        min-width: 64px;
+        text-align: right;
+        font-weight: 900;
+        letter-spacing: .3px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #111;
+        border: 1px solid rgba(255, 255, 255, .14);
+      }
+
+      /* Actions */
+      #rankings .rank-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+
+      #rankings .rank-viewall {
+        font-weight: 900;
+        font-size: .95rem;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .25);
+        background: #0b0b0b;
+      }
+
+      #rankings .rank-viewall:hover {
+        border-color: rgba(243, 112, 33, .45);
+        box-shadow: 0 6px 14px rgba(243, 112, 33, .12);
+      }
+
+      /* Mobile-first */
+      @media (max-width:900px) {
+
+        /* Collapse to a denser grid on small screens */
+        #rankings .hdr {
+          display: none;
+        }
+
+        #rankings .row {
+          grid-template-columns: 44px 40px 1fr auto;
+          gap: 10px;
+        }
+
+        #rankings .state,
+        #rankings .events,
+        #rankings .cat {
+          display: none;
+        }
+
+        #rankings .avatar {
+          width: 34px;
+          height: 34px;
+        }
+
+        #rankings .points {
+          min-width: 56px;
+          padding: 6px 8px;
+        }
+      }
+    </style>
+
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>National Rankings — Top 5</div>
+
+      <div class="board-wrap">
+        <div class="board-line"></div>
+        <div class="board">
+
+          <!-- Category chips (non-dynamic; link to the same full page) -->
+          <div class="chips">
+            <a class="chip-tab chip-tab--active" href="/rankings.html">Men</a>
+            <a class="chip-tab" href="/rankings.html">Women</a>
+            <a class="chip-tab" href="/rankings.html">Junior</a>
+          </div>
+
+          <!-- Header -->
+          <div class="hdr">
+            <div>Rank</div>
+            <div></div>
+            <div>Name</div>
+            <div>State</div>
+            <div>Events</div>
+            <div>Category</div>
+            <div>Points</div>
+          </div>
+
+          <!-- Row 1 -->
+          <a class="row" href="/rankings.html" aria-label="Open full rankings">
+            <div class="rank-badge">1</div>
+            <img class="avatar" loading="lazy" src="assets/athletes/ath_01.webp" alt="Aiman R. avatar"
+              onerror="this.onerror=null;this.src='assets/athletes/ath_default.webp'">
+            <div class="name">Aiman R.</div>
+            <div class="state">
+              <img class="flag" loading="lazy" src="assets/flags/SEL.webp" alt="Selangor flag"
+                onerror="this.onerror=null;this.src='assets/flags/placeholder.webp'">
+              <span>SEL</span>
+            </div>
+            <div class="events">6</div>
+            <div class="cat">Men</div>
+            <div class="points">582</div>
+          </a>
+
+          <!-- Row 2 -->
+          <a class="row" href="/rankings.html" aria-label="Open full rankings">
+            <div class="rank-badge">2</div>
+            <img class="avatar" loading="lazy" src="assets/athletes/ath_02.webp" alt="Farah N. avatar"
+              onerror="this.onerror=null;this.src='assets/athletes/ath_default.webp'">
+            <div class="name">Farah N.</div>
+            <div class="state">
+              <img class="flag" loading="lazy" src="assets/flags/KUL.webp" alt="Kuala Lumpur flag"
+                onerror="this.onerror=null;this.src='assets/flags/placeholder.webp'">
+              <span>KUL</span>
+            </div>
+            <div class="events">7</div>
+            <div class="cat">Women</div>
+            <div class="points">560</div>
+          </a>
+
+          <!-- Row 3 -->
+          <a class="row" href="/rankings.html" aria-label="Open full rankings">
+            <div class="rank-badge">3</div>
+            <img class="avatar" loading="lazy" src="assets/athletes/ath_03.webp" alt="Hakim Z. avatar"
+              onerror="this.onerror=null;this.src='assets/athletes/ath_default.webp'">
+            <div class="name">Hakim Z.</div>
+            <div class="state">
+              <img class="flag" loading="lazy" src="assets/flags/JHR.webp" alt="Johor flag"
+                onerror="this.onerror=null;this.src='assets/flags/placeholder.webp'">
+              <span>JHR</span>
+            </div>
+            <div class="events">5</div>
+            <div class="cat">Men</div>
+            <div class="points">545</div>
+          </a>
+
+          <!-- Row 4 -->
+          <a class="row" href="/rankings.html" aria-label="Open full rankings">
+            <div class="rank-badge">4</div>
+            <img class="avatar" loading="lazy" src="assets/athletes/ath_04.webp" alt="Syasya L. avatar"
+              onerror="this.onerror=null;this.src='assets/athletes/ath_default.webp'">
+            <div class="name">Syasya L.</div>
+            <div class="state">
+              <img class="flag" loading="lazy" src="assets/flags/SBH.webp" alt="Sabah flag"
+                onerror="this.onerror=null;this.src='assets/flags/placeholder.webp'">
+              <span>SBH</span>
+            </div>
+            <div class="events">6</div>
+            <div class="cat">Women</div>
+            <div class="points">531</div>
+          </a>
+
+          <!-- Row 5 -->
+          <a class="row" href="/rankings.html" aria-label="Open full rankings">
+            <div class="rank-badge">5</div>
+            <img class="avatar" loading="lazy" src="assets/athletes/ath_05.webp" alt="Daniel K. avatar"
+              onerror="this.onerror=null;this.src='assets/athletes/ath_default.webp'">
+            <div class="name">Daniel K.</div>
+            <div class="state">
+              <img class="flag" loading="lazy" src="assets/flags/PNG.webp" alt="Penang flag"
+                onerror="this.onerror=null;this.src='assets/flags/placeholder.webp'">
+              <span>PNG</span>
+            </div>
+            <div class="events">3</div>
+            <div class="cat">Junior</div>
+            <div class="points">520</div>
+          </a>
+
+        </div>
+        <div class="board-line" style="margin-top:10px;"></div>
+
+        <div class="rank-actions">
+          <a class="rank-viewall" href="rankings.html">View all rankings →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- =================== / RANKINGS (Orange Leaderboard v2) ==================== -->
+
+
+
+  <section id="videos" class="section--shadeC section--divider">
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>Video Highlights</div>
+      <div class="video-grid" style="margin-top:18px;">
+        <div class="video-wrap"><iframe src="https://www.youtube.com/embed/sSTn2INmB_Y" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe></div>
+        <div class="video-wrap"><iframe src="https://www.youtube.com/embed/Lvm6oHQM-YA" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe></div>
+        <div class="video-wrap"><iframe src="https://www.youtube.com/embed/EEcndEINxVQ" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="athletes" class="section--shadeB section--texture section--divider">
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>Athlete Spotlight</div>
+
+      <div class="ath-spot-row">
+        <!-- Tile 1 -->
+        <a class="ath-spot" href="athlete_profile.html" aria-label="View profile: Mohd Ali">
+          <div class="ath-spot__portrait" style="background-image:url('assets/athletes/one.jpg')"></div>
+          <div class="ath-spot__middle"><span class="ath-spot__vname">MOHD ALI</span></div>
+          <div class="ath-spot__action" style="background-image:url('assets/img/img_0009_818110e49b06.webp')">
+            <span class="ath-spot__cta">View Profile →</span>
+          </div>
+        </a>
+
+        <!-- Tile 2 -->
+        <a class="ath-spot" href="athlete_profile.html" aria-label="View profile: Ahmad Termizi">
+          <div class="ath-spot__portrait" style="background-image:url('assets/athletes/two.jpg')"></div>
+          <div class="ath-spot__middle"><span class="ath-spot__vname">AHMAD TERMIZI</span></div>
+          <div class="ath-spot__action" style="background-image:url('assets/img/img_0010_125c3d90da84.webp')">
+            <span class="ath-spot__cta">View Profile →</span>
+          </div>
+        </a>
+
+        <!-- Tile 3 -->
+        <a class="ath-spot" href="athlete_profile.html" aria-label="View profile: Syafiq Rahman">
+          <div class="ath-spot__portrait" style="background-image:url('assets/athletes/three.jpg')"></div>
+          <div class="ath-spot__middle"><span class="ath-spot__vname">SYAFIQ RAHMAN</span></div>
+          <div class="ath-spot__action" style="background-image:url('assets/img/img_0011_7fe2f6529fac.webp')">
+            <span class="ath-spot__cta">View Profile →</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <style>
+      /* === Athlete Spotlight — 3-zone unified cards with LEFT orange strip === */
+
+      .ath-spot-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .ath-spot {
+        position: relative;
+        display: grid;
+        grid-template-columns: 25% 80px 1.75fr;
+        /* portrait | name strip | action */
+        height: 620px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #0a0a0a;
+        /* card base */
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+        text-decoration: none;
+      }
+
+      /* 🔶 Single orange strip per CARD (left edge) */
+      .ath-spot::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 6px;
+        border-radius: 18px 0 0 18px;
+        background: #F37021;
+        box-shadow: 0 0 18px rgba(243, 112, 33, .45);
+        z-index: 2;
+        /* sits above images but under text */
+      }
+
+      /* Zones */
+      .ath-spot__portrait,
+      .ath-spot__action {
+        background-size: cover;
+        background-position: center;
+      }
+
+      .ath-spot__portrait {
+        filter: grayscale(100%);
+      }
+
+      .ath-spot__middle {
+        background: #1a1a1a;
+        /* grey middle strip */
+        display: flex;
+        align-items: center;
+        /* centers name vertically */
+        justify-content: center;
+        /* centers name horizontally */
+        position: relative;
+        padding-bottom: 0;
+        /* remove bottom offset */
+      }
+
+
+      /* Remove previous inner orange accent/divider if present */
+      .ath-spot__middle::after {
+        content: none;
+      }
+
+      .ath-spot__accent {
+        display: none !important;
+      }
+
+      /* Vertical name — larger and lower */
+      .ath-spot__vname {
+        transform: rotate(-90deg);
+        font-size: 1.65rem;
+        font-weight: 800;
+        letter-spacing: .22rem;
+        color: #fff;
+        text-transform: uppercase;
+        white-space: nowrap;
+        opacity: .98;
+      }
+
+      /* Action area */
+      .ath-spot__action {
+        position: relative;
+        transition: transform .25s ease;
+      }
+
+      .ath-spot:hover .ath-spot__action {
+        transform: scale(1.03);
+      }
+
+      .ath-spot__action::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, .85) 100%);
+        z-index: 0;
+        /* make sure it stays behind the button */
+      }
+
+      .ath-spot__cta {
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        background: #F37021;
+        color: #000;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 900;
+        font-size: .9rem;
+        border: 1px solid rgba(243, 112, 33, .65);
+        z-index: 2;
+      }
+
+      .ath-spot__cta:hover {
+        background: #F37021;
+        /* keep same bright orange */
+        color: #000;
+        /* no color shift */
+        filter: none;
+        /* remove any darkening */
+        opacity: 1;
+        /* ensure full brightness */
+      }
+
+
+      /* Responsive */
+      @media (max-width: 900px) {
+        .ath-spot-row {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+
+        .ath-spot {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+          border-left: 4px solid #F37021;
+          border-radius: 14px;
+          overflow: hidden;
+        }
+
+        /* Portrait on top — fixed aspect, always centered */
+        .ath-spot__portrait {
+          width: 100%;
+          aspect-ratio: 4 / 5;
+          /* stable portrait shape */
+          background-size: cover;
+          background-position: center center;
+          /* 👈 always centered */
+          filter: grayscale(100%);
+        }
+
+        /* Name strip */
+        .ath-spot__middle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 56px;
+          background: #1a1a1a;
+        }
+
+        .ath-spot__vname {
+          transform: none;
+          font-size: 1.15rem;
+          letter-spacing: .15rem;
+        }
+
+        /* Action photo — fixed aspect, always centered */
+        .ath-spot__action {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 16 / 10;
+          /* wider than portrait */
+          background-size: cover;
+          background-position: center center;
+          /* 👈 always centered */
+          transform: none !important;
+        }
+
+        .ath-spot__action::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, .75) 100%);
+          z-index: 0;
+        }
+
+        .ath-spot__cta {
+          position: absolute;
+          bottom: 16px;
+          right: 16px;
+          z-index: 2;
+        }
+      }
+    </style>
+
+  </section>
+  <!-- ============================ SHOP (Featured) ============================ -->
+  <section id="shop" class="section--shadeC section--divider">
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>Shop — Federation Merch</div>
+
+      <div class="shop-grid" style="margin-top:18px;">
+        <!-- Product 1 -->
+        <a class="product-card" href="shop.html" aria-label="Open shop">
+          <figure class="product-media">
+            <img src="assets/shop/shop1.webp" alt="Federation Cap" loading="lazy">
+          </figure>
+          <div class="product-info">
+            <div class="product-name">Federation Cap</div>
+            <div class="product-meta">
+              <span class="product-price">RM69</span>
+              <span class="product-cta">Add to Bag</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Product 2 -->
+        <a class="product-card" href="shop.html" aria-label="Open shop">
+          <figure class="product-media">
+            <img src="assets/shop/shop2.webp" alt="Classic Tee" loading="lazy">
+          </figure>
+          <div class="product-info">
+            <div class="product-name">Classic Tee</div>
+            <div class="product-meta">
+              <span class="product-price">RM79</span>
+              <span class="product-cta">Add to Bag</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Product 3 -->
+        <a class="product-card" href="shop.html" aria-label="Open shop">
+          <figure class="product-media">
+            <img src="assets/shop/shop3.webp" alt="Skate Shoes" loading="lazy">
+          </figure>
+          <div class="product-info">
+            <div class="product-name">Skate Shoes</div>
+            <div class="product-meta">
+              <span class="product-price">RM259</span>
+              <span class="product-cta">Add to Bag</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="shop-actions">
+        <a class="shop-viewall" href="shop.html">View all products →</a>
+      </div>
+    </div>
+
+    <!-- Scoped styles -->
+    <style>
+      /* ======= SHOP (scoped to #shop) ======= */
+      #shop .shop-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+
+      @media (max-width:900px) {
+        #shop .shop-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width:640px) {
+        #shop .shop-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      #shop .product-card {
+        display: flex;
+        flex-direction: column;
+        background: #0e0e0e;
+        border: 1px solid rgba(255, 255, 255, .10);
+        border-radius: 16px;
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+        transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+      }
+
+      #shop .product-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(243, 112, 33, .45);
+        box-shadow: 0 12px 28px rgba(243, 112, 33, .12);
+      }
+
+      #shop .product-media {
+        margin: 0;
+        background: #0a0a0a;
+        display: block;
+        overflow: hidden;
+      }
+
+      #shop .product-media img {
+        width: 100%;
+        height: auto;
+        display: block;
+        aspect-ratio: 1/1;
+        object-fit: cover;
+        filter: saturate(1.04) contrast(1.02);
+      }
+
+      #shop .product-info {
+        padding: 12px 14px;
+        background: #0c0c0c;
+        border-top: 1px solid rgba(255, 255, 255, .08);
+      }
+
+      #shop .product-name {
+        font-weight: 900;
+        letter-spacing: .2px;
+        margin-bottom: 6px;
+      }
+
+      #shop .product-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #shop .product-price {
+        font-weight: 900;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #111;
+        border: 1px solid rgba(255, 255, 255, .14);
+      }
+
+      #shop .product-cta {
+        font-weight: 900;
+        padding: 8px 12px;
+        border-radius: 10px;
+        color: #000;
+        background: linear-gradient(180deg, #F37021, #ff8a45);
+        border: none;
+      }
+
+      #shop .shop-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 14px;
+      }
+
+      #shop .shop-viewall {
+        font-weight: 900;
+        font-size: .95rem;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .25);
+        background: #0b0b0b;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      #shop .shop-viewall:hover {
+        border-color: rgba(243, 112, 33, .45);
+        box-shadow: 0 6px 14px rgba(243, 112, 33, .12);
+      }
+    </style>
+  </section>
+  <!-- ========================== / SHOP (Featured) =========================== -->
+
+
+  <section id="partners" class="section--shadeA">
+    <div class="container">
+      <div class="section-title"><span class="bar"></span>Recognised & Supported By</div>
+      <div class="partners" style="margin-top:18px;">
+        <img decoding="async" loading="lazy" src="assets/img/img_0001_6bffb6f84021.webp" alt="MYSKATE">
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container small">
+      © 2025 Malaysia Skate Federation · Powered by ZED Systems
+    </div>
+  </footer>
+
+</body>
+
+</html>

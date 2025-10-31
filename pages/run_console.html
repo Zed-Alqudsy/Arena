@@ -1,0 +1,1201 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Run Console</title>
+  <link rel="stylesheet" href="../styles.css">
+  <script src="../shared/core.js"></script>
+  <script src="../shared/state.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="/core/sync_local.js"></script>
+
+
+  <style>
+    /* --- RUN CONSOLE LAYOUT (FINAL) --- */
+    body {
+      background: #f8fafc;
+    }
+
+    /* Grid: R1 = Status | Judges, R2 = Controls (full), R3 = Scores | Log */
+    .wrap .grid {
+      display: grid !important;
+      grid-template-columns: 1.2fr 1fr;
+      grid-template-areas:
+        "status judges"
+        "controls controls"
+        "display display"
+        "scores scores"
+        "log log";
+
+      gap: 1.2rem;
+      align-items: stretch;
+      margin-top: 1rem;
+    }
+
+
+    /* Card styling */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      min-height: 100px;
+    }
+
+    /* Map cards to areas */
+    .card-status {
+      grid-area: status;
+    }
+
+    .card-judges {
+      grid-area: judges;
+    }
+
+    .card-controls {
+      grid-area: controls;
+    }
+
+    .card-scores {
+      grid-area: scores;
+    }
+
+    .card-log {
+      grid-area: log;
+    }
+
+    /* Two-column helper inside Run Controls */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem 1rem;
+      align-items: start;
+    }
+
+    /* Utilities */
+    .kv {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap
+    }
+
+    .row {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .muted {
+      color: #6b7280
+    }
+
+    .badge {
+      padding: .25rem .5rem;
+      border-radius: 999px;
+      background: #eef2ff
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    .table th,
+    .table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: .5rem;
+      text-align: left
+    }
+
+    .nowrap {
+      white-space: nowrap
+    }
+
+    .log {
+      height: 160px;
+      overflow: auto;
+      background: #0b1020;
+      color: #cfe3ff;
+      padding: 10px;
+      border-radius: 12px
+    }
+
+    /* Manual scores mini-form */
+    .judge-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: .5rem;
+      margin-top: .5rem
+    }
+
+    .judge-grid input {
+      width: 100%;
+      padding: .4rem .5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px
+    }
+
+    /* Stack below 900px */
+    @media (max-width:900px) {
+      .wrap .grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "status"
+          "judges"
+          "controls"
+          "display"
+          "scores"
+          "log";
+      }
+
+      .judge-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    /* Final polish */
+    .card-controls {
+      margin-bottom: .5rem;
+    }
+
+    .card-log,
+    .card-scores {
+      min-height: 200px;
+    }
+
+    /* Display Centre card */
+    .card-display {
+      grid-area: display;
+    }
+
+    .display-status {
+      font-size: .9rem;
+      color: #6b7280;
+      margin-top: .5rem
+    }
+
+    /* Make row-1 cards fill their grid tracks */
+    .card-status,
+    .card-judges {
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <a class="btn" href="javascript:history.back()">← Back</a>
+      <h2 style="margin:0">Run Console</h2>
+      <span id="tags" class="tag"></span>
+    </div>
+
+    <div class="grid">
+      <!-- STATUS -->
+      <div class="card card-status">
+        <h3>Status</h3>
+        <div class="kv">
+          <span id="ath" class="tag">Athletes: 0</span>
+          <span id="jud" class="tag">Judges: 0</span>
+          <span>Heat Status: <b id="lblHeatStatus" class="badge">Not Started</b></span>
+        </div>
+        <div class="row muted" style="margin-top:.5rem">
+          <span id="activeHeatDebug"></span>
+        </div>
+      </div>
+
+      <!-- JUDGE LINKS (reference only; Step 4 will make real judge page) -->
+      <div class="card card-judges">
+        <h3>Judge Links</h3>
+        <p class="muted">Pilot: you may use Manual Scores below. Judge links are for Step 4.</p>
+        <div id="judgeLinks" class="kv"></div>
+      </div>
+
+      <!-- RUN CONTROLS -->
+      <div class="card card-controls">
+        <h3>Run Controls</h3>
+        <div class="grid-2">
+          <div>
+            <div class="row">
+              <button id="btnStart" class="btn primary">Start</button>
+              <button id="btnLock" class="btn">Lock</button>
+              <button id="btnReveal" class="btn primary">Reveal</button>
+              <button id="btnUndo" class="btn">Undo</button>
+            </div>
+            <div class="row" style="margin-top:.5rem">
+              <label class="nowrap">
+                Athlete for reveal:
+                <select id="selAthlete"></select>
+              </label>
+              <label class="nowrap" style="margin-left:.75rem">
+                <input type="checkbox" id="chkDropExtremes"> Drop extremes
+              </label>
+            </div>
+            <!-- Manual Scores (pilot) -->
+            <div style="margin-top:.75rem">
+              <div class="muted">Manual Scores (pilot)</div>
+              <div class="judge-grid">
+                <input id="ms_J1" placeholder="J1 total">
+                <input id="ms_J2" placeholder="J2 total">
+                <input id="ms_J3" placeholder="J3 total">
+                <input id="ms_J4" placeholder="J4 total">
+                <input id="ms_J5" placeholder="J5 total">
+              </div>
+              <div class="row" style="margin-top:.5rem">
+                <button id="btnSaveManual" class="btn">Save Manual Scores</button>
+                <span class="muted">Writes to scores_<cid>_<eid>_<heat></span>
+              </div>
+            </div>
+          </div>
+          <div></div>
+        </div>
+      </div>
+      <!-- DISPLAY CENTRE (separate card) -->
+      <div class="card card-display">
+        <h3>🎬 Display Centre</h3>
+
+        <!-- Control row -->
+        <div class="row" style="margin-bottom:.5rem">
+          <select id="selScreen">
+            <option value="live1">Screen 1</option>
+            <option value="live2">Screen 2</option>
+          </select>
+          <button id="btnSetIntro" class="btn">Intro</button>
+          <button id="btnSetScoreboard" class="btn">Scoreboard</button>
+          <button id="btnSetLeaderboard" class="btn">Leaderboard</button>
+          <button id="btnHide" class="btn">Hide</button>
+          <button id="btnPublishLeaderboard" class="btn">Publish Leaderboard</button>
+        </div>
+
+        <!-- Live status (both screens) -->
+        <div class="display-status" style="margin-bottom:.5rem">
+          <div>📺 <b>Screen 1</b> → <span id="displayStatus1">hide</span></div>
+          <div>📺 <b>Screen 2</b> → <span id="displayStatus2">hide</span></div>
+        </div>
+
+        <!-- Launch TV tabs (one URL per screen) -->
+        <div class="row" style="gap:.5rem; align-items:flex-start">
+          <div style="flex:1">
+            <div class="muted" style="margin-bottom:.25rem">Open Screen 1</div>
+            <div class="row" style="gap:.5rem; flex-wrap:wrap">
+              <button id="openScreen1" class="btn">Open Screen 1</button>
+            </div>
+          </div>
+          <div style="flex:1">
+            <div class="muted" style="margin-bottom:.25rem">Open Screen 2</div>
+            <div class="row" style="gap:.5rem; flex-wrap:wrap">
+              <button id="openScreen2" class="btn">Open Screen 2</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCORES MONITOR (own full row) -->
+      <div class="card card-scores">
+        <h3>Scores Monitor</h3>
+        <div class="row">
+          <span id="lblScoreStatus" class="badge">0/0 submitted</span>
+          <span class="muted" id="lblFinalWrap">
+            Final (current athlete): <b id="lblFinalScore">—</b>
+          </span>
+        </div>
+        <div style="margin-top:.5rem;overflow:auto">
+          <table class="table" id="tblScores">
+            <thead>
+              <tr>
+                <th>Judge</th>
+                <th>Athlete</th>
+                <th>Total</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EVENT LOG (own full row) -->
+      <div class="card card-log">
+        <h3>Event Log</h3>
+        <div class="row" style="margin-bottom:.5rem">
+          <button id="btnClearLog" class="btn">Clear Log</button>
+        </div>
+        <div style="max-height:240px; overflow:auto;">
+          <div id="eventLog" class="log-box"
+            style="background:#111; color:#fff; font-family:monospace; font-size:13px; padding:.6rem; border-radius:6px; min-height:140px; line-height:1.4; white-space: pre-wrap;">
+          </div>
+        </div>
+      </div>
+
+
+      <script>
+        // ---------- PARAMS ----------
+        Core.requireParams(['cid', 'eid', 'heat'], 'heat_select.html');
+        const cid = Core.getParam('cid');
+        const eid = Core.getParam('eid');
+        const heat = String(Core.getParam('heat'));
+
+        // ---------- HELPERS ----------
+        const LS = {
+          get(key, fb = null) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } },
+          set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
+          remove(key) { localStorage.removeItem(key); }
+        };
+        const k = {
+          athletes: State.keys.athletes(cid),
+          judges: State.keys.judges(cid),
+          heats: State.keys.heats(cid, eid),
+          scores: `scores_${cid}_${eid}_${heat}`,
+          active: `active_heat`,
+          leaderboard: `leaderboard`,
+          rules: `rules`,
+          display(screen) { return `display_control_${screen}`; }
+        };
+        const el = id => document.getElementById(id);
+        const now = () => new Date().toLocaleTimeString();
+
+        // ---------- TV LAUNCHER (one URL per screen) ----------
+        function openTVDisplay(screen) {
+          const url = `/pages/tv_display.html?screen=${screen}&cid=${encodeURIComponent(cid)}&eid=${encodeURIComponent(eid)}&heat=${encodeURIComponent(heat)}`;
+          window.open(url, '_blank', 'noopener');
+        }
+
+
+        function updateDisplayStatuses() {
+          try {
+            const m1 = LS.get(k.display('live1'), 'hide') || 'hide';
+            const m2 = LS.get(k.display('live2'), 'hide') || 'hide';
+            const s1 = el('displayStatus1');
+            const s2 = el('displayStatus2');
+            if (s1) s1.textContent = m1;
+            if (s2) s2.textContent = m2;
+          } catch (_) { }
+        }
+
+        // helper to persist per heat
+        function eventLogKey() { return `eventlog_${cid}_${eid}_${heat}`; }
+
+        window.log = function log(m) {
+          const line = `[${now()}] ${m}`;
+          // UI (name-mapped)
+          const athletes = JSON.parse(localStorage.getItem(`athletes_${cid}`) || '[]');
+          const id2name = Object.fromEntries(
+            athletes.map(a => [String(a.id || a.aid), a.name || a.displayName || a.fullName || a.id])
+          );
+          const displayLine = line.replace(/\b(A\d+)\b/g, m => id2name[m] || m);
+          const ta = el('eventLog');
+          ta.textContent += displayLine + "\n";
+          ta.scrollTop = ta.scrollHeight;
+
+          // Persist
+          try {
+            const key = eventLogKey();
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            arr.push(line);
+            if (arr.length > 500) arr.splice(0, arr.length - 500); // keep last 500 lines
+            localStorage.setItem(key, JSON.stringify(arr));
+          } catch (_) { }
+        };
+
+
+        // ---------- INIT DATA ----------
+        const athletes = State.arr(k.athletes);
+        const judges = State.arr(k.judges);
+        // Normalize judges count from store object or array
+        const _judStore = LS.get(k.judges, null);
+        const _judCount =
+          Array.isArray(_judStore) ? _judStore.length :
+            (Array.isArray(_judStore?.roles) ? _judStore.roles.length :
+              (Number(_judStore?.panelSize) || 0));
+        // Update header badge
+        try { el('jud').textContent = `Judges: ${_judCount}`; } catch (_) { }
+
+        const heatsObj = LS.get(k.heats, { heats: [] });
+        const heatIdx = Math.max(0, Number(heat) - 1);
+        const heatRec = (heatsObj.heats && heatsObj.heats[heatIdx]) ? heatsObj.heats[heatIdx] : { status: 'Not Started' };
+
+        // ---------- HEADER/UI SEED ----------
+        el('tags').textContent = `cid=${cid} • eid=${eid} • heat=${heat}`;
+        el('ath').textContent = `Athletes: ${athletes.length}`;
+        el('jud').textContent = `Judges: ${_judCount}`;
+        el('lblHeatStatus').textContent = heatRec.status || 'Not Started';
+        el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active) || {})})`;
+        // ---- D0.4: non-blocking judges mismatch indicator (preset vs store) ----
+        (function () {
+          try {
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const need = Number(snap?.judges) || 0;
+
+            // _judCount was computed earlier (object/array tolerant). Fallback to roles.length.
+            let have = (typeof _judCount === 'number') ? _judCount : 0;
+            if (!have) {
+              const js = LS.get(k.judges, null);
+              have = Array.isArray(js?.roles) ? js.roles.length :
+                (Array.isArray(js?.judges) ? js.judges.length : (Number(js?.panelSize) || 0));
+            }
+
+            const host = document.querySelector('.card-status .kv') || el('jud')?.parentNode;
+            if (!host) return;
+
+            const badge = document.createElement('span');
+            badge.id = 'warnJudges';
+            badge.className = 'badge';
+            badge.style.background = '#fff3cd';
+            badge.style.color = '#92400e';
+            badge.style.cursor = 'pointer';
+            badge.style.display = 'none';
+            badge.title = 'Preset judges ≠ stored panel. Click to prepare fix.';
+            badge.textContent = '⚠ Judges Mismatch — Click Prepare';
+            host.appendChild(badge);
+
+            if (need && have && need !== have) {
+              badge.style.display = 'inline-block';
+            }
+
+            badge.onclick = function () {
+              // Non-blocking: log intent only (actual prepare step can be run on demand)
+              console.log('PREPARE: align judges from preset', { need, have, cid });
+              // (Optional future: run the D0.2 align snippet here)
+            };
+          } catch (_) { /* no-op */ }
+        })();
+
+
+        // Athletes picker (preset-first: use heat slots order if present)
+        const selAthlete = el('selAthlete');
+        (function seedAthleteSelect() {
+          if (!selAthlete) return;
+
+          // Build id->name map from athletes store (IDs are canonical; names for display only)
+          const id2name = {};
+          athletes.forEach(a => {
+            const id = String(a.aid || a.id || a.code || a.name || '');
+            const nm = a.name || a.displayName || a.fullName || id;
+            if (id) id2name[id] = nm;
+          });
+
+          // Prefer slots from current heat; fallback to full athletes list
+          const slots = (heatsObj && Array.isArray(heatsObj.heats) && heatsObj.heats[heatIdx] && Array.isArray(heatsObj.heats[heatIdx].slots))
+            ? heatsObj.heats[heatIdx].slots : [];
+          const orderedIds = (slots.length ? slots.map(s => String(s.aid)).filter(Boolean)
+            : athletes.map(a => String(a.aid || a.id || a.code || a.name)).filter(Boolean));
+
+          // Preserve previous selection if still valid
+          const prev = selAthlete.value || localStorage.getItem(`ui_sel_ath_${cid}_${eid}_${heat}`) || '';
+          selAthlete.innerHTML = '';
+          orderedIds.forEach(id => {
+            const opt = document.createElement('option');
+            opt.value = id;                          // ← always store ID
+            opt.textContent = id2name[id] || id;     // ← display name
+            selAthlete.appendChild(opt);
+          });
+          if (prev && [...selAthlete.options].some(o => o.value === prev)) {
+            selAthlete.value = prev;
+          }
+        })();
+
+        // --- Generate real Judge URLs (self-contained, no external vars needed)
+        (function () {
+          var jWrap = document.getElementById('judgeLinks');
+          if (!jWrap) return;
+
+          var p = new URLSearchParams(location.search);
+          var cid = p.get('cid') || '';
+          var eid = p.get('eid') || '';
+          var heat = p.get('heat') || '';
+          var base = location.origin;
+
+          // get current athlete id (if present) so judge URLs target the same athlete
+          var aidSel = document.getElementById('selAthlete');
+          var aid = aidSel ? aidSel.value : '';
+
+          // Build ID→Name map from athletes store (names for display)
+          var aStore; try { aStore = JSON.parse(localStorage.getItem('athletes_' + cid) || '[]'); } catch (_) { aStore = []; }
+          var aList = Array.isArray(aStore) ? aStore : (aStore.athletes || []);
+          var id2name = {};
+          aList.forEach(function (a) {
+            var id = String(a.aid || a.id || a.code || a.name || '');
+            var nm = a.name || a.displayName || a.fullName || id;
+            if (id) id2name[id] = nm;
+          });
+          var aname = aid ? ((window.nameOfAth && window.nameOfAth(aid)) || id2name[aid] || aid) : '';
+
+          // Preset-first roles from judges_<cid> (fallback to J1..J5)
+          var jStore; try { jStore = JSON.parse(localStorage.getItem('judges_' + cid) || 'null'); } catch (_) { jStore = null; }
+          var roles = (Array.isArray(jStore && jStore.roles) && jStore.roles.length) ? jStore.roles
+            : ((Array.isArray(jStore && jStore.judges) && jStore.judges.length) ? jStore.judges.map(function (j) { return j.jid || j.id; }).filter(Boolean)
+              : ['J1', 'J2', 'J3', 'J4', 'J5']);
+
+          jWrap.innerHTML = '';
+          roles.forEach(function (jid) {
+            var a = document.createElement('a');
+            a.className = 'btn outline';
+            a.textContent = '🎯 ' + jid + (aname ? ' — ' + aname : '');
+            a.href = base + '/pages/judge.html'
+              + '?cid=' + encodeURIComponent(cid)
+              + '&eid=' + encodeURIComponent(eid)
+              + '&heat=' + encodeURIComponent(heat)
+              + '&j=' + encodeURIComponent(jid)
+              + (aid ? '&aid=' + encodeURIComponent(aid) : '');
+            a.target = '_blank';
+            a.rel = 'noopener';
+            jWrap.appendChild(a);
+          });
+        })();
+
+        // Rules + Scores rehydrate
+        const rules = LS.get(k.rules, { dropExtremes: false });
+        el('chkDropExtremes').checked = !!rules.dropExtremes;
+
+        // ---------- CORE ----------
+        function setHeatStatus(status) {
+          const obj = LS.get(k.heats, { heats: [] });
+          obj.heats = obj.heats || [];
+          obj.heats[heatIdx] = obj.heats[heatIdx] || {};
+          obj.heats[heatIdx].status = status;
+          LS.set(k.heats, obj);
+          el('lblHeatStatus').textContent = status;
+        }
+
+        function refreshScoresTable() {
+          // 1) read both shapes
+          const raw = LS.get(k.scores, { results: [] });
+          const rows = Array.isArray(raw) ? raw : (Array.isArray(raw.results) ? raw.results : []);
+
+          // 2) normalize accessors (safe lookups)
+          const tbl = el('tblScores');
+          const tbody = tbl ? (tbl.querySelector('tbody') || tbl) : null;
+          const sel = el('selAthlete');
+          const drop = el('chkDropExtremes');
+          const lblStatus = el('lblScoreStatus');
+          const lblFinal = el('lblFinalScore');
+          // Safe judge count fallback (when judges list isn't loaded yet)
+          const judgeCount = (Array.isArray(judges) && judges.length > 0) ? judges.length : 5;
+
+
+          if (tbody) tbody.innerHTML = '';
+          const aid = sel ? sel.value : '';
+          const list = rows.filter(r => {
+            const rAid = String(r.athleteId || r.aid || '');
+            return (!aid || rAid === String(aid));
+          });
+
+          list.forEach(r => {
+            const jid = (r.judgeId || r.jid || '-').toString();
+            const name = (athletes.find(a => (a.aid || a.id) == (r.athleteId || r.aid)) || {}).name
+              || (r.athleteId || r.aid || '-');
+
+            const totalNum = (() => {
+              if (typeof r.total === 'number') return r.total;
+
+              // read scoring weights from setup
+              const scoring = JSON.parse(localStorage.getItem(`scoring_${cid}`) || '{}');
+              const criteria = scoring.criteria || [];
+              const s = r.totals || r.scores || {};
+
+              if (criteria.length) {
+                let sum = 0, sumW = 0;
+                criteria.forEach(c => {
+                  const key = c.label.toLowerCase().replace(/\s+/g, '_');
+                  const val = parseFloat(s[key]);
+                  const w = parseFloat(c.weight) || 1;
+                  if (!isNaN(val)) { sum += val * w; sumW += w; }
+                });
+                return sumW ? (sum / sumW) : NaN;
+              }
+
+              const nums = Object.values(s).map(Number).filter(Number.isFinite);
+              return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : NaN;
+            })();
+
+            const total = Number.isFinite(totalNum) ? totalNum.toFixed(2) : '—';
+            const time = r.time || (r.ts ? new Date(r.ts).toLocaleTimeString([], { hour12: false }) : '');
+
+            if (tbody) {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${jid}</td><td>${name}</td><td>${total}</td><td>${time}</td>`;
+              tbody.appendChild(tr);
+            }
+          });
+
+          // update submitted counter
+          if (lblStatus) lblStatus.textContent = `${list.length}/${judgeCount} submitted`;
+
+
+          // Compute "Final (current athlete)" with dynamic-criteria support
+          // 1) If row has r.total, use it. 2) Else recompute using scoring_<cid> weights.
+          //    Falls back to simple mean of any numeric fields if scoring_<cid> missing.
+          const _qs = new URLSearchParams(location.search);
+          const _cid = _qs.get('cid') || '';
+          let _criteria = [];
+          try {
+            const _scRaw = localStorage.getItem('scoring_' + _cid);
+            if (_scRaw) {
+              const _sc = JSON.parse(_scRaw);
+              const arr = Array.isArray(_sc?.criteria) ? _sc.criteria : [];
+              _criteria = arr.map(c => ({
+                slug: String(c.label || c.id || '').toLowerCase().replace(/\s+/g, '_'),
+                w: Number(c.weight) || 1
+              })).filter(x => x.slug);
+            }
+          } catch (_) { }
+
+          const totals = list.map(r => {
+            if (typeof r.total === 'number') return r.total;
+
+            // accept either r.totals or r.scores
+            const s = r.totals || r.scores || {};
+            // if we have scoring config, do weighted recompute by slugs
+            if (_criteria.length) {
+              let sum = 0, wsum = 0;
+              for (const { slug, w } of _criteria) {
+                const v = Number(s[slug]);
+                if (Number.isFinite(v)) { sum += v * w; wsum += w; }
+              }
+              if (wsum > 0) return sum / wsum;
+            }
+            // fallback: mean of any numeric fields present
+            const vals = Object.values(s).map(Number).filter(Number.isFinite);
+            return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : NaN;
+          }).filter(Number.isFinite);
+
+
+          let final = '—';
+          if (totals.length > 0) {
+            let arr = [...totals];
+            if (drop && drop.checked && arr.length >= 3) {
+              arr.sort((a, b) => a - b);
+              arr = arr.slice(1, arr.length - 1);
+            }
+            final = (arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(2);
+          }
+          if (lblFinal) lblFinal.textContent = final;
+
+          try { window.log && window.log(`REFRESH · ${list.length}/${judgeCount} submitted (Final=${final})`); } catch { }
+
+
+          return final;
+
+        }
+
+
+        function saveManualScores() {
+          const aid = selAthlete.value;
+          const nowStr = now();
+          const inputs = ['J1', 'J2', 'J3', 'J4', 'J5'].map(jid => {
+            const v = document.getElementById(`ms_${jid}`)?.value?.trim();
+            return { jid, val: v };
+          }).filter(x => x.val !== '' && x.val != null);
+
+          if (!inputs.length) { log('No manual scores entered'); return; }
+
+          const store = LS.get(k.scores, { results: [] });
+          store.results = store.results || [];
+
+          inputs.forEach(({ jid, val }) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return;
+            // Replace existing entry for this judge+athlete in this heat
+            const idx = store.results.findIndex(r => String(r.jid) === jid && String(r.aid) === String(aid));
+            const row = { jid, aid, total: num, time: nowStr };
+            if (idx >= 0) store.results[idx] = row; else store.results.push(row);
+          });
+
+          LS.set(k.scores, store);
+          log(`SAVE manual scores for aid=${aid}`);
+          refreshScoresTable();
+        }
+
+        /* === STEP 5C-2 PATCH · publishReveal() (ID-only, no new keys) === */
+        (function () {
+          const p = new URLSearchParams(location.search);
+          const CID = p.get('cid'), EID = p.get('eid'), HEAT = String(p.get('heat'));
+
+          // Read scoring criteria (for recompute if needed)
+          const scoring = LS.get(`scoring_${CID}`, null);
+          const criteria = (scoring && Array.isArray(scoring.criteria)) ? scoring.criteria : [];
+
+          function normalizeScoresArray() {
+            // Read canonical scores array; tolerate legacy {results:[]}
+            let v = LS.get(k.scores, []);
+            if (!Array.isArray(v)) v = (v && Array.isArray(v.results)) ? v.results : [];
+            return v;
+          }
+
+          function slug(s) { return String(s || '').toLowerCase().replace(/\s+/g, '_'); }
+
+          function recomputeFromBag(bag) {
+            // bag = r.totals or r.scores with lowercase slug keys
+            if (!criteria.length || !bag) return NaN;
+            const slugs = criteria.map(c => slug(c.label || c.id));
+            const weights = criteria.map(c => Number(c.weight || 0));
+            const vals = slugs.map(s => Number(bag[s]));
+            if (vals.some(v => !Number.isFinite(v))) return NaN;
+            const sumW = (weights.reduce((a, b) => a + b, 0)) || 100;
+            const raw = vals.reduce((acc, v, i) => acc + v * weights[i], 0);
+            return +(raw / (sumW / 100)).toFixed(2);
+          }
+
+          function perJudgeTotalsFor(aid) {
+            // latest row per judge for this athlete
+            const rows = normalizeScoresArray().filter(r => String(r.aid || r.athleteId) === String(aid));
+            const map = new Map();
+            rows.forEach(r => {
+              const jid = String(r.jid || r.judgeId || '');
+              map.set(jid, r); // last write wins
+            });
+            const list = Array.from(map.values()).map(r => {
+              if (Number.isFinite(r.total)) return Number(r.total);
+              const bag = r.totals || r.scores || {};
+              return recomputeFromBag(bag);
+            }).filter(Number.isFinite);
+            return list;
+          }
+
+          function computeFinal(judgeTotals) {
+            if (!judgeTotals.length) return null;
+            let arr = judgeTotals.slice();
+            const rules = LS.get(k.rules, {});
+            if (rules && rules.dropExtremes && arr.length >= 3) {
+              // drop exactly one min & one max
+              const min = Math.min(...arr), max = Math.max(...arr);
+              let droppedMin = false, droppedMax = false;
+              arr = arr.filter(x => {
+                if (!droppedMin && x === min) { droppedMin = true; return false; }
+                if (!droppedMax && x === max) { droppedMax = true; return false; }
+                return true;
+              });
+            }
+            const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+            return +avg.toFixed(2);
+          }
+
+          window.publishReveal = function () {
+            const aid = selAthlete.value;
+            if (!aid) { log('REVEAL aborted: no athlete selected'); return; }
+
+            const judgeTotals = perJudgeTotalsFor(aid);
+            // Fallback to current table calc (already computed + respects drop-extremes)
+            const tableFinal = (function () { try { const s = refreshScoresTable(); return s === '—' ? null : Number(s); } catch { return null; } })();
+            const final = (judgeTotals.length ? computeFinal(judgeTotals) : null) ?? tableFinal;
+
+            const packet = { cid: CID, eid: EID, heat: HEAT, aid, judgeTotals, final };
+            LS.set('reveal', packet);                    // ← write complete, ID-only packet
+            LS.set('reveal_tick', Date.now());           // nudge TVs to re-render (safe)
+            log(`REVEAL · ${aid} (Final=${final ?? '—'})`);
+            // --- Auto-update leaderboard (global-safe) ---
+            try {
+              if (typeof publishLeaderboard === 'function') {
+                publishLeaderboard();
+                log('AUTO leaderboard publish triggered');
+              } else {
+                console.warn('publishLeaderboard not found, skipping auto-publish');
+              }
+            } catch (err) {
+              console.error('auto leaderboard publish failed:', err);
+            }
+          };
+        })();
+
+
+
+        function publishLeaderboard() {
+          const p = new URLSearchParams(location.search);
+          const CID = p.get('cid'), EID = p.get('eid'), HEAT = String(p.get('heat'));
+
+          // Read scoring rules (for weighted recompute if needed)
+          const scoring = LS.get(`scoring_${CID}`, null);
+          const criteria = (scoring && Array.isArray(scoring.criteria)) ? scoring.criteria : [];
+          const slug = s => String(s || '').toLowerCase().replace(/\s+/g, '_');
+          const rules = LS.get(k.rules, {});
+
+          // Normalize scores array (supports legacy {results:[]})
+          let v = LS.get(k.scores, []);
+          const rows = Array.isArray(v) ? v : (v && Array.isArray(v.results)) ? v.results : [];
+
+          // Latest row per (aid, jid)
+          const latest = new Map();
+          for (const r of rows) {
+            const aid = String(r.aid || r.athleteId || r.athlete || '');
+            const jid = String(r.jid || r.judgeId || '');
+            if (!aid || !jid) continue;
+            latest.set(`${aid}|${jid}`, r);
+          }
+
+          // Build per-athlete judge totals
+          const byAid = {};
+          for (const r of latest.values()) {
+            const aid = String(r.aid || r.athleteId);
+            let total = Number.isFinite(r.total) ? Number(r.total) : NaN;
+            if (!Number.isFinite(total)) {
+              const bag = r.totals || r.scores || {};
+              if (criteria.length) {
+                const ws = criteria.map(c => Number(c.weight || 0));
+                const slugs = criteria.map(c => slug(c.label || c.id));
+                const vals = slugs.map(s => Number(bag[s]));
+                if (!vals.some(x => !Number.isFinite(x))) {
+                  const sumW = ws.reduce((a, b) => a + b, 0) || 100;
+                  total = (vals.reduce((acc, v, i) => acc + v * ws[i], 0)) / (sumW / 100);
+                }
+              } else {
+                const nums = [bag.difficulty, bag.execution, bag.flow].map(Number).filter(Number.isFinite);
+                if (nums.length) total = nums.reduce((a, b) => a + b, 0) / nums.length;
+              }
+            }
+            if (!Number.isFinite(total)) continue;
+            (byAid[aid] || (byAid[aid] = [])).push(total);
+          }
+
+          // Apply drop-extremes and compute finals
+          const out = [];
+          for (const aid in byAid) {
+            let arr = byAid[aid].slice();
+            if (rules && rules.dropExtremes && arr.length >= 3) {
+              const min = Math.min(...arr), max = Math.max(...arr);
+              let dm = false, dx = false;
+              arr = arr.filter(x => {
+                if (!dm && x === min) { dm = true; return false; }
+                if (!dx && x === max) { dx = true; return false; }
+                return true;
+              });
+            }
+            const final = +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2);
+            out.push({ aid, final });
+          }
+
+          // Sort + rank; IDs only in storage
+          out.sort((a, b) => b.final - a.final);
+          const rowsOut = out.map((r, i) => ({ rank: i + 1, aid: r.aid, final: r.final }));
+
+          LS.set(`leaderboard_${CID}_${EID}`, { rows: rowsOut });
+          LS.set('leaderboard_tick', Date.now()); // nudge TVs to refresh
+          log(`PUBLISH LEADERBOARD (${rowsOut.length})`);
+        }
+
+
+        function setDisplay(mode) {
+          const screen = el('selScreen').value; // live1 | live2
+          LS.set(k.display(screen), mode);
+          log(`DISPLAY ${screen} → ${mode}`);
+          updateDisplayStatuses();
+        }
+
+
+
+        // ---------- BUTTONS ----------
+        el('btnStart').onclick = () => {
+          LS.set(k.active, { cid, eid, heat });
+          setHeatStatus('Running');
+          el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active))})`;
+          log(`START heat=${heat}`);
+        };
+        el('btnLock').onclick = () => {
+          setHeatStatus('Completed');
+          // disable manual inputs after lock
+          ['J1', 'J2', 'J3', 'J4', 'J5'].forEach(id => { const inp = document.getElementById(`ms_${id}`); if (inp) inp.disabled = true; });
+          log('LOCK');
+        };
+        el('btnReveal').onclick = publishReveal;
+        el('btnUndo').onclick = () => { LS.remove('reveal'); log('UNDO last reveal'); };
+        el('btnSetIntro').onclick = () => setDisplay('intro');
+        el('btnSetScoreboard').onclick = () => setDisplay('scoreboard');
+        el('btnSetLeaderboard').onclick = () => setDisplay('leaderboard');
+        el('btnHide').onclick = () => setDisplay('hide');
+        el('btnPublishLeaderboard').onclick = publishLeaderboard;
+        updateDisplayStatuses();
+        // Open TV buttons (temporarily point all to scoreboard until other pages exist)
+        el('openScreen1').onclick = () => openTVDisplay('live1');
+        el('openScreen2').onclick = () => openTVDisplay('live2');
+
+
+
+        el('selScreen').onchange = updateDisplayStatuses;
+
+        el('btnClearLog').onclick = () => {
+          el('eventLog').textContent = '';
+          try {
+            const key = `eventlog_${cid}_${eid}_${heat}`;
+            localStorage.removeItem(key);
+          } catch (_) { }
+        };
+
+        el('btnSaveManual').onclick = saveManualScores;
+
+        el('chkDropExtremes').onchange = (e) => {
+          const next = { dropExtremes: !!e.target.checked };
+          LS.set(k.rules, next);
+          log(`RULES dropExtremes=${next.dropExtremes}`);
+          refreshScoresTable();
+        };
+        el('selAthlete').onchange = function () { log('SELECT aid=' + this.value); refreshScoresTable(); };
+
+        // ---------- RECOVERY ----------
+        refreshScoresTable();
+        const active = LS.get(k.active);
+        if (active && active.cid === cid && active.eid === eid && String(active.heat) === String(heat)) {
+          el('lblHeatStatus').textContent = 'Running';
+          log('RECOVER: active heat restored');
+        }
+
+        // Live refresh on storage events (future-proof)
+        window.addEventListener('storage', (ev) => {
+          if (ev.key === k.scores || ev.key === k.rules) {
+            refreshScoresTable();
+          }
+          if (ev.key === k.display('live1') || ev.key === k.display('live2')) {
+            updateDisplayStatuses();
+          }
+        });
+
+      </script>
+      <!-- RUN: judge lock listener -->
+      <script>
+        (function () {
+          if (!window.SyncLocal) {
+            console.warn("SyncLocal not found");
+            return;
+          }
+
+          function el(id) { return document.getElementById(id); }
+          function keyScores(cid, eid, heat) { return `scores_${cid}_${eid}_${heat}`; }
+          function readJSON(k, fallback) {
+            try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(fallback)); }
+            catch { return fallback; }
+          }
+          function writeJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+          const url = new URL(location.href);
+          const cid = url.searchParams.get('cid') || '';
+          const eid = url.searchParams.get('eid') || '';
+          const heat = url.searchParams.get('heat') || '';
+
+          // Restore persisted Event Log for this heat (name-mapped view)
+          (function restoreEventLog() {
+            try {
+              const key = `eventlog_${cid}_${eid}_${heat}`;
+              const arr = JSON.parse(localStorage.getItem(key) || '[]');
+
+              // Build ID→Name map
+              const athletes = JSON.parse(localStorage.getItem(`athletes_${cid}`) || '[]');
+              const id2name = Object.fromEntries(
+                athletes.map(a => [String(a.id || a.aid), a.name || a.displayName || a.fullName || a.id])
+              );
+
+              // Display: map A1/A2… → names
+              const humanize = s => s.replace(/\b(A\d+)\b/g, m => id2name[m] || m);
+
+              const ta = el('eventLog');
+              ta.textContent = arr.length ? arr.map(humanize).join("\n") + "\n" : "";
+              ta.scrollTop = ta.scrollHeight;
+            } catch (_) { }
+          })();
+
+
+          const locked = new Set();
+          (function bootstrapLocked() {
+            const KEY = keyScores(cid, eid, heat);
+            let arr = readJSON(KEY, []);
+            // Accept both shapes: array OR {results:[]}
+            if (!Array.isArray(arr)) arr = (arr && Array.isArray(arr.results)) ? arr.results : [];
+            // Do NOT reset storage here; just adapt the view
+            arr.forEach(r => locked.add(`${r.athleteId || r.aid || ''}::${r.judgeId || r.jid || ''}`));
+          })();
+
+
+          function refreshUI() {
+            try { window._refreshSubmitted && window._refreshSubmitted(); } catch { }
+            try { window._renderScoresTable && window._renderScoresTable(); } catch { }
+          }
+          function recompute() {
+            try { window._recomputeFinal && window._recomputeFinal(); } catch { }
+            try { window.compute && window.compute(); } catch { }
+          }
+          function logMsg(txt) {
+            try { window.log && window.log(txt); } catch { console.log('[RUN]', txt); }
+          }
+
+          console.log("RUN LISTENER READY");
+
+          // keep SyncLocal active (no processing here)
+          window.SyncLocal.on(function (pkt) {
+            // handled by storage-based ingestion below — avoid double-processing/logging
+            return;
+          });
+
+          /* === STORAGE-BASED JUDGE INGEST === */
+          (function () {
+            function ingestFromStorage() {
+              try {
+                const pkt = JSON.parse(localStorage.getItem('judge_status') || 'null');
+                if (!pkt || pkt.type !== 'judge_status') return;
+                if (pkt.cid !== cid || pkt.eid !== eid || String(pkt.heat) !== String(heat)) return;
+
+                const KEY = keyScores(cid, eid, heat);
+                let arr = readJSON(KEY, []);
+                if (!Array.isArray(arr)) arr = (arr && Array.isArray(arr.results)) ? arr.results : [];
+
+                const idx = arr.findIndex(r =>
+                  (String(r.athleteId || r.aid) === String(pkt.athleteId)) &&
+                  (String(r.judgeId || r.jid) === String(pkt.judgeId))
+                );
+
+                const rec = {
+                  athleteId: pkt.athleteId || pkt.aid,
+                  judgeId: pkt.judgeId || pkt.jid,
+                  totals: pkt.scores,
+                  total: pkt.total,
+                  ts: Date.now()
+                };
+
+                if (idx >= 0) arr[idx] = Object.assign(arr[idx], rec); else arr.push(rec);
+
+                writeJSON(KEY, arr);
+
+                try { window.refreshScoresTable && window.refreshScoresTable(); } catch (_) { }
+
+                try {
+                  const aid = pkt.athleteId || pkt.aid;
+                  const aname = (window.nameOfAth ? window.nameOfAth(aid) : aid);
+                  const label = (idx >= 0 ? 'UPDATE' : 'JUDGE LOCK') + ' · ' + pkt.judgeId + ' → ' + aname;
+
+                  window.log && window.log(label);
+                } catch (_) { }
+              } catch (_) { }
+            }
+
+            // Run once on load
+            ingestFromStorage();
+
+            // Listen across tabs
+            window.addEventListener('storage', function (ev) {
+              if (ev.key === 'judge_status' || ev.key === 'judge_status_tick') {
+                ingestFromStorage();
+              }
+            });
+          })();
+        })();
+      </script>
+
+      <script>
+        /* When athlete selector changes: rebuild Judge links + refresh table (persists selection) */
+        (function () {
+          var sel = document.getElementById('selAthlete');
+          if (!sel) return;
+
+          // per-heat key to remember selection
+          var qs = new URLSearchParams(location.search);
+          var CID = qs.get('cid') || '';
+          var EID = qs.get('eid') || 'default';
+          var HEAT = qs.get('heat') || '1';
+          var UIKEY = `ui_sel_ath_${CID}_${EID}_${HEAT}`;
+
+          function rebuildJudgeLinks() {
+            var jWrap = document.getElementById('judgeLinks');
+            if (!jWrap) return;
+
+            var aid = sel.value || '';
+            var aname = (window.nameOfAth ? window.nameOfAth(aid) : aid);
+
+            var base = location.origin;
+            // Build ID→Name map from athletes store (names for display)
+            var aStore = (function () { try { return JSON.parse(localStorage.getItem('athletes_' + cid) || '[]'); } catch (_) { return []; } })();
+            var aList = Array.isArray(aStore) ? aStore : (aStore.athletes || []);
+            var id2name = {};
+            aList.forEach(function (a) {
+              var id = String(a.aid || a.id || a.code || a.name || '');
+              var nm = a.name || a.displayName || a.fullName || id;
+              if (id) id2name[id] = nm;
+            });
+
+            // Preset-first roles from judges_<cid> (fallback to J1..J5)
+            var jStore = (function () {
+              try { return JSON.parse(localStorage.getItem('judges_' + cid) || 'null'); } catch (_) { return null; }
+            })();
+            var roles = Array.isArray(jStore?.roles) && jStore.roles.length ? jStore.roles
+              : Array.isArray(jStore?.judges) && jStore.judges.length ? jStore.judges.map(function (j) { return j.jid || j.id; }).filter(Boolean)
+                : ['J1', 'J2', 'J3', 'J4', 'J5'];
+
+            // current athlete id → display name
+            var aidSel = document.getElementById('selAthlete');
+            var aid = aidSel ? aidSel.value : '';
+            var aname = aid ? ((window.nameOfAth && window.nameOfAth(aid)) || aid) : '';
+            var aname = aid ? ((window.nameOfAth && window.nameOfAth(aid)) || id2name[aid] || aid) : '';
+
+            jWrap.innerHTML = '';
+            roles.forEach(function (jid) {
+              var a = document.createElement('a');
+              a.className = 'btn outline';
+              a.textContent = '🎯 ' + jid + (aname ? ' — ' + aname : '');
+              a.href = base + '/pages/judge.html'
+                + '?cid=' + encodeURIComponent(cid)
+                + '&eid=' + encodeURIComponent(eid)
+                + '&heat=' + encodeURIComponent(heat)
+                + '&j=' + encodeURIComponent(jid)
+                + (aid ? '&aid=' + encodeURIComponent(aid) : '');
+              a.target = '_blank';
+              a.rel = 'noopener';
+              jWrap.appendChild(a);
+            });
+          }
+
+          // restore last selection (if present and valid)
+          var saved = localStorage.getItem(UIKEY);
+          if (saved && [...sel.options].some(o => o.value === saved)) {
+            sel.value = saved;
+          }
+
+          // initial build + table refresh
+          rebuildJudgeLinks();
+          if (window.refreshScoresTable) window.refreshScoresTable();
+
+          // persist on change
+          sel.addEventListener('change', function () {
+            localStorage.setItem(UIKEY, sel.value || '');
+            if (window.log) window.log('SELECT aid=' + this.value);
+            rebuildJudgeLinks();
+            if (window.refreshScoresTable) window.refreshScoresTable();
+          });
+        })();
+      </script>
+
+
+      <script>
+        /* Name lookup helpers: athlete/judge ID → display name (reads Setup data) */
+        (function () {
+          function readJSON(key, fb) {
+            try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch { return fb; }
+          }
+          const qs = new URLSearchParams(location.search);
+          const cid = qs.get('cid') || '';
+
+          // Build simple maps once
+          const ATHMAP = {};
+          const JUDMAP = {};
+
+          // Athletes: supports either [ {id/name}, ... ] or { athletes:[...] }
+          const aRaw = readJSON('athletes_' + cid, { athletes: [] });
+          const aList = Array.isArray(aRaw) ? aRaw : (aRaw.athletes || []);
+          aList.forEach(a => {
+            const id = String(a.aid || a.id || '');
+            if (id) ATHMAP[id] = a.name || id;
+          });
+
+          // Judges: supports either [ {id/name}, ... ] or { judges:[...] }
+          const jRaw = readJSON('judges_' + cid, { judges: [] });
+          const jList = Array.isArray(jRaw) ? jRaw : (jRaw.judges || []);
+          jList.forEach(j => {
+            const id = String(j.jid || j.id || '');
+            if (id) JUDMAP[id] = j.name || id;
+          });
+
+          // Expose helpers
+          window.nameOfAth = function (aid) { aid = String(aid || ''); return ATHMAP[aid] || aid; };
+          window.nameOfJud = function (jid) { jid = String(jid || ''); return JUDMAP[jid] || jid; };
+        })();
+      </script>
+
+</body>
+
+</html>

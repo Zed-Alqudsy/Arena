@@ -1,0 +1,37 @@
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heat Select</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="../shared/core.js"></script><script src="../shared/state.js"></script><script src="../shared/ui.js"></script>
+</head><body><div class="wrap">
+  <div class="header">
+    <a class="btn" href="javascript:history.back()">← Back</a>
+    <h2 style="margin:0">Choose Heat</h2>
+    <span id="tags" class="tag"></span>
+  </div>
+
+  <div id="list" class="list"></div>
+</div>
+<script>
+Core.requireParams(['cid','eid'],'competition_home.html');
+const cid = Core.getParam('cid'), eid = Core.getParam('eid');
+document.getElementById('tags').textContent = `cid=${cid} • eid=${eid}`;
+
+const heats = State.arr(State.keys.heats(cid,eid));
+const list = document.getElementById('list');
+if (!heats.length) {
+  // skeleton: show 2 placeholder heats; no writes
+  ['Heat A','Heat B'].forEach((h,i)=>{
+    const el = document.createElement('div');
+    el.className='card'; el.innerHTML=`<h3>${h}</h3><a class="btn primary" href="${Core.buildUrl('run_console.html',{cid,eid,heat:'H'+(i+1)})}">Open</a>`;
+    list.appendChild(el);
+  });
+} else {
+  heats.forEach(h=>{
+    const el = document.createElement('div');
+    el.className='card'; el.innerHTML=`<h3>${h.name}</h3><a class="btn primary" href="${Core.buildUrl('run_console.html',{cid,eid,heat:h.id})}">Open</a>`;
+    list.appendChild(el);
+  });
+}
+</script>
+</body></html>

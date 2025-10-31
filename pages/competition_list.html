@@ -1,0 +1,366 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Choose Competition • XGAMES ARENA</title>
+
+  <!-- absolute paths to avoid 404s -->
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/shared/core.js"></script>
+  <script src="/shared/state.js"></script>
+
+  <style>
+    :root {
+      --blue: #2563eb;
+      --navy: #1e3a8a;
+      --bg: #f9fafb;
+      --card: #fff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --btn: #2563eb;
+      --btn-ink: #fff;
+      --soft: #f1f5f9;
+      --tag-bg: #eef2ff;
+      --tag-ink: #3730a3;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+    }
+
+    /* 🔹 Full-width gradient header (same as sample) */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      color: #fff;
+      padding: 60px 20px 100px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      font-size: 1.1rem;
+      opacity: .9;
+    }
+
+    /* content wrapper overlaps header */
+    .wrap {
+      width: 100%;
+      max-width: 960px;
+      margin: -60px auto 60px;
+      /* pulls cards upward */
+      position: relative;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+
+    /* top “card” row inside wrap */
+    .header {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+      margin-bottom: 22px;
+      justify-content: space-between;
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    /* toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
+    }
+
+    .toolbar input[type="search"],
+    .toolbar select {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      transition: .2s;
+    }
+
+    .toolbar input[type="search"] {
+      flex: 1 1 240px;
+    }
+
+    .toolbar input[type="search"]:focus,
+    .toolbar select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .2);
+      outline: none;
+    }
+
+    .count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* list grid */
+    .list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width:760px) {
+      .list {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .08);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform .2s, box-shadow .25s, border-color .2s;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 32px rgba(37, 99, 235, .18);
+      border-color: var(--blue);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .kv {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-ink);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #e0e7ff;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    /* buttons */
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: .2s;
+      background: var(--btn);
+      color: var(--btn-ink);
+      border: none;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, .35);
+      transform: translateY(-2px);
+    }
+
+    .btn.secondary {
+      background: var(--soft);
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn.secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* empty */
+    .empty {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .05);
+    }
+
+    /* Constrain inner content like other pages */
+    .toolbar,
+    #list,
+    #empty {
+      width: 100%;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 16px;
+      padding-right: 16px;
+      box-sizing: border-box;
+    }
+
+    /* Pull the first card up under the blue header, like before */
+    .toolbar {
+      margin-top: -60px;
+      /* overlap the gradient header */
+      margin-bottom: 20px;
+    }
+
+    /* Keep the grid aligned to the same content width */
+    .list {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    /* Optional: add some bottom air */
+    #empty {
+      margin-bottom: 60px;
+    }
+  </style>
+
+
+
+</head>
+
+<body>
+  <header>
+    <h1>📂 Choose Competition</h1>
+    <p>Browse approved competitions and open the selected competition home</p>
+  </header>
+
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <div style="font-size:22px"></div>
+        <h2>Choose Competition</h2>
+        <span class="tag">List</span>
+      </div>
+      <a class="btn secondary" href="/pages/competition_center.html">← Back to Competition Center</a>
+    </div>
+  </div>
+
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search by name, CID, venue…">
+    <select id="status">
+      <option value="">All statuses</option>
+      <option value="Active">Active</option>
+      <option value="Approved">Approved</option>
+      <option value="Draft">Draft</option>
+    </select>
+    <div class="count" id="count"></div>
+  </div>
+
+  <div id="list" class="list"></div>
+  <div id="empty" class="empty" style="display:none">No competitions found. Create one in Setup and Approve.</div>
+
+
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const list = $('list'), empty = $('empty'), q = $('q'), status = $('status'), count = $('count');
+
+      // 1) prefer 'competitions_active' (approved by Setup)
+      let active = [];
+      try { active = JSON.parse(localStorage.getItem('competitions_active') || '[]'); } catch (_) { }
+      let items = Array.isArray(active) && active.length ? active : [];
+
+      // 2) fallback: approved from legacy 'competitions'
+      if (!items.length) {
+        const all = State.arr(State.keys.comps);
+        items = all.filter(c => (c.status || '').toLowerCase() === 'approved');
+      }
+
+      const render = () => {
+        const term = (q.value || '').toLowerCase().trim();
+        const st = status.value;
+
+        const rows = items.filter(c => {
+          const hay = [
+            c.name, c.cid, c.venue, c.date, c.start, c.end, c.status
+          ].map(x => String(x || '').toLowerCase()).join(' ');
+          const passQ = !term || hay.includes(term);
+          const passS = !st || String(c.status || '').toLowerCase() === st.toLowerCase();
+          return passQ && passS;
+        });
+
+        count.textContent = rows.length ? rows.length + ' found' : '';
+        list.innerHTML = '';
+        empty.style.display = rows.length ? 'none' : 'block';
+
+        rows.forEach(c => {
+          const el = document.createElement('div');
+          el.className = 'card';
+
+          const date = (c.start && c.end) ? `${c.start} → ${c.end}` : (c.date || '—');
+          const venue = c.venue || '—';
+          const statusTag = c.status || '—';
+
+          el.innerHTML = `
+          <div class="row">
+            <div class="title">${c.name || 'Untitled'}</div>
+            <a class="btn" href="${Core.buildUrl('/pages/competition_home.html', { cid: c.cid })}">Open</a>
+          </div>
+          <div class="kv">
+            <span class="tag">CID: ${c.cid}</span>
+            <span class="tag">${venue}</span>
+            <span class="tag">${date}</span>
+            <span class="tag">${statusTag}</span>
+          </div>
+        `;
+          list.appendChild(el);
+        });
+      };
+
+      q.addEventListener('input', render);
+      status.addEventListener('change', render);
+      render();
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heats Overview • ARENA</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <script src="../shared/core.js"></script>
+  <script src="../shared/state.js"></script>
+  <script src="../shared/ui.js"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <a class="btn" href="javascript:history.back()">← Back</a>
+      <h2 style="margin:0">Heats Overview</h2>
+      <span id="tags" class="tag"></span>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Heats List</h3>
+      <div id="heatsList" class="muted">Loading…</div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Actions</h3>
+      <button id="btnAdd" class="btn">➕ Add Heat</button>
+      <button id="btnSave" class="btn primary">💾 Save</button>
+    </div>
+  </div>
+
+  <script src="../shared/lang.js"></script>
+  <script>
+    Core.requireParams(['cid', 'eid'], 'competition_list.html');
+    const cid = Core.getParam('cid');
+    const eid = Core.getParam('eid');
+    document.getElementById('tags').textContent = `cid=${cid} • eid=${eid}`;
+  </script>
+
+  <script>
+    const keyHeats = State.keys.heats(cid, eid);
+    const data = State.getJSON(keyHeats, null);
+    const listEl = document.getElementById('heatsList');
+
+    if (!data || !Array.isArray(data.heats) || !data.heats.length) {
+      listEl.innerHTML = '<p>No heats yet. Click “Add Heat” to create one.</p>';
+    } else {
+      listEl.innerHTML = data.heats.map(h => `
+    <div class="card" style="margin:8px 0;">
+      <strong>${h.name || h.id}</strong><br>
+      <span class="muted">Status: ${h.status || 'pending'}</span>
+    </div>
+  `).join('');
+    }
+  </script>
+
+  <script>
+    const btnAdd = document.getElementById('btnAdd');
+    btnAdd.addEventListener('click', () => {
+      const dataNow = State.getJSON(keyHeats, { heats: [] });
+      if (!Array.isArray(dataNow.heats)) dataNow.heats = [];
+
+      const newHeat = {
+        id: 'H' + (dataNow.heats.length + 1),
+        name: 'Heat ' + (dataNow.heats.length + 1),
+        status: 'pending',
+        slots: [],
+        attemptsPerAthlete: 1
+      };
+
+      dataNow.heats.push(newHeat);
+      State.setJSON(keyHeats, dataNow);
+
+      UI.toast(`Added ${newHeat.name}`);
+      location.reload();
+    });
+  </script>
+
+  <script>
+    const btnSave = document.getElementById('btnSave');
+    btnSave.addEventListener('click', () => {
+      const current = State.getJSON(keyHeats, null);
+      if (!current) {
+        UI.toast('⚠️ No heats data to save.');
+        return;
+      }
+      State.setJSON(keyHeats, current);
+      UI.toast('💾 Heats saved successfully.');
+    });
+  </script>
+
+</body>
+
+</html>

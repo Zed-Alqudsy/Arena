@@ -1,0 +1,56 @@
+// /shared/presets.js
+const PRESETS = {
+  olympic_street: {
+    name: "Olympic Street",
+    discipline: "Street",
+    rounds: ["Qualification", "Final"],
+    runsPerAthlete: 2,
+    tricksPerRound: 5,
+    runTime: 45,
+    judges: 5,
+    judgingScale: 100,
+    dropHighLow: true,
+    advancementTopN: 8,
+    scoringFormat: "best_run_average",
+  },
+  olympic_park: {
+    name: "Olympic Park",
+    discipline: "Park",
+    rounds: ["Qualification", "Final"],
+    runsPerAthlete: 3,
+    runTime: 45,
+    judges: 5,
+    judgingScale: 100,
+    dropHighLow: true,
+    advancementTopN: 8,
+    scoringFormat: "best_run_average",
+  },
+  xgames_street: {
+    name: "X Games Street",
+    discipline: "Street",
+    rounds: ["Heats", "Final"],
+    runsPerAthlete: 3,
+    tricksPerRound: 5,
+    runTime: 60,
+    judges: 5,
+    judgingScale: 100,
+    dropHighLow: true,
+    advancementTopN: 4,
+    scoringFormat: "best_of_three",
+  },
+  local_standard: {
+    name: "Local Standard Competition",
+    discipline: "Street",
+    rounds: ["Qualification", "Final"],
+    runsPerAthlete: 2,
+    tricksPerRound: 3,
+    runTime: 40,
+    judges: 3,
+    judgingScale: 100,
+    dropHighLow: false,
+    advancementTopN: 5,
+    scoringFormat: "average_of_runs"
+  },
+};
+
+if (typeof module !== "undefined") module.exports = PRESETS;

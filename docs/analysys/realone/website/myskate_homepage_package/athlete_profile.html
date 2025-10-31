@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Athlete — International Profile | XGAMES Arena</title>
+
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg-2: #0f0f0f;
+      --card: #121212;
+      --line: rgba(255, 255, 255, .10);
+      --text: #f5f5f5;
+      --muted: #b8b8b8;
+      --orange: #f37021;
+      --orange-2: #ff8a45;
+      --chip: rgba(255, 255, 255, .06);
+      --gold-1: #ffd66b;
+      --gold-2: #ffbe3b;
+      --silver-1: #eaeef5;
+      --silver-2: #cdd5e0;
+      --bronze-1: #e8b08a;
+      --bronze-2: #d6925e;
+      --shadow: 0 12px 40px rgba(0, 0, 0, .35);
+      --radius: 18px;
+      --w: min(1180px, 100%);
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    .container {
+      width: var(--w);
+      margin: 0 auto;
+      padding: 0 18px
+    }
+
+    /* Topbar — minimal, premium */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: linear-gradient(180deg, #0c0c0c, rgba(10, 10, 10, .85));
+      backdrop-filter: saturate(140%) blur(6px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar__in {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: .5px
+    }
+
+    .brand .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--orange)
+    }
+
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-left: 8px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      font-weight: 600
+    }
+
+    .nav a:hover {
+      box-shadow: 0 0 0 2px rgba(243, 112, 33, .18) inset;
+      border-color: rgba(243, 112, 33, .5)
+    }
+
+    /* HERO — cinematic with arc mask & scroll cue */
+    .hero {
+      position: relative;
+      min-height:clamp(340px,52vw,520px);
+      display: flex;
+      align-items: flex-end;
+      isolation: isolate;
+      background: url("assets/athletes/profile.jpg") center 11%/cover no-repeat;
+      filter: saturate(1.08) contrast(1.02) brightness(1.18);
+      box-shadow: var(--shadow);
+    }
+
+    .hero:after {
+      /* top clear, bottom deep — ensures seamless transition */
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(10, 10, 10, .05) 0%, rgba(10, 10, 10, .12) 40%, rgba(10, 10, 10, .78) 86%, rgba(10, 10, 10, .92) 100%);
+    }
+
+    .hero__arc {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 60px;
+      z-index: 1;
+      background: radial-gradient(120% 140% at 50% -40px, rgba(255, 255, 255, .10), transparent 60%);
+      mask: radial-gradient(120% 140% at 50% -30px, #000 62%, transparent 63%);
+    }
+
+    .hero__in {
+      position: relative;
+      z-index: 2;
+      width: var(--w);
+      margin: 0 auto;
+      padding: 24px 18px 26px
+    }
+
+    .crumbs {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px
+    }
+
+    .title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: clamp(26px, 4.2vw, 40px);
+      font-weight: 900;
+      line-height: 1.06;
+      text-shadow: 0 3px 22px rgba(0, 0, 0, .55)
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--line);
+      font-weight: 700;
+      font-size: 12px
+    }
+
+    .chip--orange {
+      background: linear-gradient(180deg, var(--orange), var(--orange-2));
+      color: #121212;
+      border: none
+    }
+
+    .flag {
+      width: 18px;
+      height: 12px;
+      border-radius: 2px;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, .18)
+    }
+
+    .subchips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px
+    }
+
+    .scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #ddd;
+      opacity: .9
+    }
+
+    .scroll-cue i {
+      display: block;
+      width: 1px;
+      height: 22px;
+      margin: 6px auto 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .0), rgba(255, 255, 255, .8));
+      animation: drop 1.8s infinite
+    }
+
+    @keyframes drop {
+      0% {
+        transform: translateY(0)
+      }
+
+      70% {
+        transform: translateY(6px)
+      }
+
+      100% {
+        transform: translateY(0)
+      }
+    }
+
+    /* STAT STRIP — premium tiles with glow bar */
+    .strip {
+      background:
+        radial-gradient(900px 360px at 50% -220px, rgba(243, 112, 33, .16), transparent 70%),
+        linear-gradient(180deg, #0b0b0b 0%, #0e0e0e 100%);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stats {
+      display: grid;
+      gap: 12px;
+      padding: 18px 0;
+      grid-template-columns: repeat(2, 1fr)
+    }
+
+    @media(min-width:760px) {
+      .stats {
+        grid-template-columns: repeat(6, 1fr)
+      }
+    }
+
+    .tile {
+      position: relative;
+      overflow: hidden;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #141414, #101010);
+      border: 1px solid var(--line);
+      padding: 14px 12px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset;
+    }
+
+    .tile:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(243, 112, 33, .55), transparent)
+    }
+
+    .t-k {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .t-v {
+      font-size: clamp(18px, 2.4vw, 24px);
+      font-weight: 900;
+      margin-top: 4px
+    }
+
+    .t-d {
+      font-size: 12px;
+      margin-top: 2px;
+      color: #6ee7a8
+    }
+
+    /* STORY ZONE — split with portrait card */
+    .section {
+      padding: 26px 0
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px
+    }
+
+    @media(min-width:960px) {
+      .grid {
+        grid-template-columns: 1.15fr .85fr
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 18px
+    }
+
+    .meta-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .meta {
+      background: #0e0e0e;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .meta small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 4px
+    }
+
+    .meta b {
+      font-size: 14px
+    }
+
+    .lead {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-top: 10px
+    }
+
+    .portrait {
+      position: relative;
+      min-height: 260px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(10, 10, 10, .05), rgba(10, 10, 10, .6)),
+        url("assets/athletes/potrait.jpg") center 22%/cover no-repeat;
+      box-shadow: var(--shadow);
+    }
+
+    .portrait .tag {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(2px);
+      border: 1px solid rgba(255, 255, 255, .14);
+      font-weight: 700
+    }
+
+    /* ACHIEVEMENTS — medals */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--chip);
+      font-weight: 700;
+      font-size: 12px
+    }
+
+    .badge--gold {
+      background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+      color: #2a1b00;
+      border: none
+    }
+
+    .badge--silver {
+      background: linear-gradient(180deg, var(--silver-1), var(--silver-2));
+      color: #1a1f2a;
+      border: none
+    }
+
+    .badge--bronze {
+      background: linear-gradient(180deg, var(--bronze-1), var(--bronze-2));
+      color: #2a140a;
+      border: none
+    }
+
+    /* TIMELINE — cards with year rail */
+    .timeline {
+      display: grid;
+      gap: 12px
+    }
+
+    .event {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #141414, #101010);
+      padding: 14px 14px 14px 56px;
+      overflow: hidden;
+    }
+
+    .event:before {
+      content: attr(data-year);
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #181818, #0e0e0e);
+      border-right: 1px solid var(--line);
+      font-weight: 900;
+      color: #ddd
+    }
+
+    .event h4 {
+      margin: 0 0 6px 0;
+      font-size: 16px
+    }
+
+    .event p {
+      margin: 0;
+      color: var(--muted)
+    }
+
+    .event .result {
+      margin-top: 8px
+    }
+
+    /* GALLERY STRIP */
+    .gallery {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px
+    }
+
+    .shot {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      min-height: 160px;
+      background: #0e0e0e
+    }
+
+    .shot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.06) contrast(1.02)
+    }
+
+    .shot:after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .25))
+    }
+
+    @media(max-width:760px) {
+      .gallery {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    /* CTA */
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--chip);
+      font-weight: 800
+    }
+
+    .btn--orange {
+      background: linear-gradient(180deg, var(--orange), var(--orange-2));
+      color: #121212;
+      border: none
+    }
+
+    .btn:hover {
+      box-shadow: 0 0 0 2px rgba(243, 112, 33, .18) inset
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      text-align: center
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="container topbar__in">
+      <div class="brand"><span class="dot"></span> XGAMES ARENA</div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="rankings.html">Rankings</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__in">
+      <div class="crumbs"><a href="index.html" style="color:var(--muted)">Home</a> · Athlete</div>
+      <div class="title">
+        Aisyah “Skylark” Rahman
+        <span class="chip chip--orange">Inline Freestyle</span>
+        <span class="chip"><img class="flag" src="assets/flags/MY.png" alt="MY"> Kuala Lumpur</span>
+      </div>
+      <div class="subchips" aria-hidden="true">
+        <span class="chip">NSID: KL-IF-0921</span>
+        <span class="chip">Club: Metro Bladers</span>
+        <span class="chip">Ranking: #3 National</span>
+      </div>
+    </div>
+    <div class="hero__arc" aria-hidden="true"></div>
+    <div class="scroll-cue">Scroll<i></i></div>
+  </section>
+
+  <!-- STAT STRIP -->
+  <section class="strip">
+    <div class="container">
+      <div class="stats">
+        <div class="tile">
+          <div class="t-k">Total Points</div>
+          <div class="t-v">1,420</div>
+          <div class="t-d">▲ +6.8% this season</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">Events</div>
+          <div class="t-v">18</div>
+          <div class="t-d">Active</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">Gold</div>
+          <div class="t-v">7</div>
+          <div class="t-d">Last: Sep 2025</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">Silver</div>
+          <div class="t-v">5</div>
+          <div class="t-d">Stable</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">Bronze</div>
+          <div class="t-v">3</div>
+          <div class="t-d">Improving</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">Best Score</div>
+          <div class="t-v">96.4</div>
+          <div class="t-d">PB at KL Open</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STORY ZONE -->
+  <section class="section">
+    <div class="container grid">
+      <article class="card">
+        <h3>About the Athlete</h3>
+        <div class="meta-list">
+          <div class="meta"><small>Age</small><b>19</b></div>
+          <div class="meta"><small>Height</small><b>166 cm</b></div>
+          <div class="meta"><small>Stance</small><b>Regular</b></div>
+          <div class="meta"><small>Coach</small><b>Imran T.</b></div>
+          <div class="meta"><small>Federation ID</small><b>MSF-IF-2025-019</b></div>
+          <div class="meta"><small>Started</small><b>2017</b></div>
+        </div>
+        <p class="lead">
+          Skylark blends speed and precision with expressive transitions — known for clean cone lines
+          and consistent podium finishes. Off the rink, she mentors junior skaters on balance mechanics
+          and performance mindset.
+        </p>
+        <div class="cta">
+          <a class="btn" href="index.html">← Home</a>
+          <a class="btn" href="rankings.html">View Rankings</a>
+          <a class="btn btn--orange" href="#">Follow Athlete</a>
+        </div>
+      </article>
+
+      <aside class="portrait">
+        <span class="tag">Featured • 2025 Season</span>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ACHIEVEMENTS -->
+  <section class="section" style="padding-top:8px">
+    <div class="container">
+      <div class="card">
+        <h3>Achievements</h3>
+        <div class="badges" aria-label="Medal counts">
+          <span class="badge badge--gold">🥇 7× Gold</span>
+          <span class="badge badge--silver">🥈 5× Silver</span>
+          <span class="badge badge--bronze">🥉 3× Bronze</span>
+          <span class="badge">🏆 PB 96.4 — KL Open</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPETITION TIMELINE -->
+  <section class="section" style="padding-top:8px">
+    <div class="container">
+      <div class="timeline">
+        <div class="event" data-year="2025">
+          <h4>KL Open — Freestyle <span class="badge badge--gold" style="margin-left:8px">🥇 Gold</span></h4>
+          <p>Personal best run with high technical accuracy and flow.</p>
+          <div class="result"><span class="badge">Score 96.4</span></div>
+        </div>
+        <div class="event" data-year="2025">
+          <h4>Penang Classic — Speed <span class="badge badge--silver" style="margin-left:8px">🥈 Silver</span></h4>
+          <p>Top-3 qualifying through precision gates, strong finals pace.</p>
+          <div class="result"><span class="badge">Score 93.1</span></div>
+        </div>
+        <div class="event" data-year="2025">
+          <h4>Putrajaya Series — Slide <span class="badge badge--bronze" style="margin-left:8px">🥉 Bronze</span></h4>
+          <p>Clean entry speeds; minor deductions on exit control.</p>
+          <div class="result"><span class="badge">Score 90.8</span></div>
+        </div>
+        <div class="event" data-year="2024">
+          <h4>JB Masters — Freestyle <span class="badge badge--gold" style="margin-left:8px">🥇 Gold</span></h4>
+          <p>High-tempo routine with creative cone sequences.</p>
+          <div class="result"><span class="badge">Score 95.2</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEDIA STRIP -->
+  <section class="section" style="padding-top:8px">
+    <div class="container">
+      <div class="gallery">
+        <figure class="shot"><img src="assets/athletes/p1.jpg" alt="Training session"></figure>
+        <figure class="shot"><img src="assets/athletes/p2.jpg" alt="Competition run"></figure>
+        <figure class="shot"><img src="assets/athletes/p3.jpg" alt="Podium moment"></figure>
+      </div>
+      <div class="cta" style="margin-top:14px">
+        <a class="btn btn--orange" href="#">Watch 15s Highlight</a>
+        <a class="btn" href="#">Download Media Kit</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">© XGAMES Arena — Federation • Athletes • Fans</div>
+  </footer>
+</body>
+
+</html>

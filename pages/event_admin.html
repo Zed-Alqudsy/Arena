@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Event Admin • XGAMES Arena</title>
+
+  <link rel="stylesheet" href="../styles.css">
+  <script src="../shared/core.js"></script>
+  <script src="../shared/state.js"></script>
+  <script src="../shared/ui.js"></script>
+
+  <style>
+    body {
+      background: #f9fafb;
+      color: #0f172a;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .muted {
+      color: #64748b;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .btn.primary {
+      background: #2563eb;
+      color: #fff;
+      border-color: #1e40af;
+    }
+
+    .btn.primary:hover {
+      background: #1d4ed8;
+    }
+
+    .heat-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+    }
+
+    .heat-item span {
+      font-weight: 600;
+      color: #1e3a8a;
+    }
+
+    .heat-actions a {
+      font-size: 14px;
+      color: #2563eb;
+      text-decoration: none;
+      margin-left: 8px;
+    }
+
+    .heat-actions a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:48px 0;text-align:center;color:#fff;">
+    <h1 style="margin:0;font-size:28px;font-weight:800;">Event Administration</h1>
+    <p style="margin:4px 0 0 0;opacity:.9;">Manage event info, heats, and progression</p>
+  </header>
+
+  <div class="wrap">
+    <div class="header">
+      <a class="btn" href="javascript:history.back()">← Back</a>
+      <h2 style="margin:0;">Event Admin</h2>
+      <span id="tags" class="muted"></span>
+    </div>
+
+    <!-- === Event Overview Cards === -->
+    <div class="grid">
+      <div class="card">
+        <h3>Event Info</h3>
+        <div id="info" class="muted">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h3>Preset Summary</h3>
+        <div id="presetSummary" class="muted">No preset detected.</div>
+      </div>
+
+
+      <div class="card">
+        <h3>Next</h3>
+        <p class="muted">Choose a heat to run.</p>
+        <a id="chooseHeat" class="btn primary" href="#">Choose Heat</a>
+      </div>
+    </div>
+
+    <!-- === Heats Overview Section === -->
+    <div class="card" style="margin-top:24px;">
+      <h3>Heats Overview</h3>
+      <p class="muted">Manage and review all heats for this event.</p>
+
+      <div id="heatsContainer" style="margin-top:16px;">
+        <div id="heatsEmpty" class="muted"
+          style="padding:16px;border:1px dashed #e5e7eb;border-radius:10px;text-align:center;">
+          No heats created yet.
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+        <button id="seedJudgesBtn" class="btn">Prepare Judges</button>
+        <button id="addHeatBtn" class="btn primary">＋ Add Heat</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Core.requireParams(['cid', 'eid'], 'competition_home.html');
+    const cid = Core.getParam('cid'), eid = Core.getParam('eid');
+    document.getElementById('tags').textContent = `cid=${cid} • eid=${eid}`;
+    // --- Judges readiness check (read-only; non-blocking) ---
+    try {
+      const judges = State.arr(State.keys.judges(cid)); // reads judges_<CID>
+      const tagEl = document.getElementById('tags');
+      if (judges && judges.length) {
+        tagEl.textContent += ` • Judges Ready (${judges.length})`;
+      } else {
+        tagEl.textContent += ` • Judges Missing`;
+      }
+    } catch (e) {
+      // fail-silent to avoid blocking event admin
+    }
+
+
+    // === Load Event Info ===
+    const events = State.arr(State.keys.events(cid));
+    const ev = events.find(e => e.eid === eid) || { name: 'Untitled Event', division: 'Open' };
+    document.getElementById('info').textContent = `${ev.name} • ${ev.division}`;
+
+    // --- Preset resolver (read-only) ---
+    function getPresetSnap() {
+      return (ev && ev.preset) || State.getJSON('preset_snapshot_' + cid, null);
+    }
+
+
+    // --- Preset preview (read-only) ---
+    (function () {
+      const snap = ev?.preset || State.getJSON('preset_snapshot_' + cid, null);
+      const el = document.getElementById('presetSummary');
+      if (!el) return;
+
+      if (!snap) {
+        el.textContent = 'No preset detected for this event.';
+        return;
+      }
+
+      const rows = [
+        ['Discipline', snap.discipline || '—'],
+        ['Runs per Athlete', snap.runsPerAthlete ?? '—'],
+        ['Tricks per Round', snap.tricksPerRound ?? '—'],
+        ['Judges Panel', snap.judges ?? '—'],
+        ['Scoring Format', snap.scoringFormat || '—'],
+        ['Drop High/Low', (snap.dropHighLow === true ? 'Yes' : (snap.dropHighLow === false ? 'No' : '—'))],
+        ['Advancement (Top N)', snap.advancementTopN ?? '—']
+      ];
+
+      el.innerHTML = rows.map(([k, v]) => `<div><b>${k}:</b> ${String(v)}</div>`).join('');
+    })();
+
+
+    document.getElementById('chooseHeat').href = Core.buildUrl('heat_select.html', { cid, eid });
+
+    // === Heats Management Logic ===
+    const heatsKey = State.keys.heats(cid, eid);
+    let heatsData = State.getJSON(heatsKey, { heats: [] });
+
+    const container = document.getElementById('heatsContainer');
+    const emptyBox = document.getElementById('heatsEmpty');
+
+    document.getElementById('seedJudgesBtn').onclick = () => {
+      const key = State.keys.judges(cid);
+      const snap = (typeof getPresetSnap === 'function' ? getPresetSnap() : null) || {};
+      const presetSize = Number(snap.judges || snap.judgesPanel || snap.scoring?.judges || 0);
+
+      if (!presetSize || presetSize < 1) {
+        UI.toast('No judges panel size found in preset');
+        return;
+      }
+
+      // Always override previous structure for consistency
+      const cur = { panelSize: presetSize, roles: [] };
+      cur.roles = Array.from({ length: presetSize }, (_, i) => `J${i + 1}`);
+      State.setJSON(key, cur);
+
+      UI.toast(`Overridden judges: ${presetSize} role(s) from preset`);
+    };
+
+
+    function renderHeats() {
+      container.querySelectorAll('.heat-item').forEach(el => el.remove());
+      if (!heatsData.heats.length) {
+        emptyBox.style.display = 'block';
+        return;
+      }
+      emptyBox.style.display = 'none';
+
+      heatsData.heats.forEach((h, i) => {
+        const row = document.createElement('div');
+        row.className = 'heat-item';
+        row.innerHTML = `
+  <div style="display:flex;flex-direction:column;">
+    <span>Heat ${i + 1}</span>
+    <div class="muted" style="font-size:12px;margin-top:4px;">
+      ${h.discipline || '—'} • Runs: ${h.runsPerAthlete ?? '—'} • Tricks: ${h.tricksPerRound ?? '—'} • Adv: ${h.advancementTopN ?? '—'} • ${h.scoringFormat || '—'}
+    </div>
+  </div>
+  <div class="heat-actions">
+    <a href="${Core.buildUrl('run_console.html', { cid, eid, heat: i + 1 })}">Open</a>
+    <a href="#" data-index="${i}" class="delHeat">Delete</a>
+  </div>
+`;
+
+        container.appendChild(row);
+      });
+
+      document.querySelectorAll('.delHeat').forEach(btn => {
+        btn.onclick = e => {
+          e.preventDefault();
+          const i = parseInt(btn.dataset.index);
+          heatsData.heats.splice(i, 1);
+          State.setJSON(heatsKey, heatsData);
+          UI.toast('Heat deleted');
+          renderHeats();
+        };
+      });
+    }
+
+    document.getElementById('addHeatBtn').onclick = () => {
+      const snap = getPresetSnap() || {};
+      const nextNum = heatsData.heats.length + 1;
+
+      const newHeat = {
+        id: Core.uid('HEAT'),
+        name: `Heat ${nextNum}`,
+        status: 'pending',
+
+        // --- Preset-derived defaults (read-only at creation; editable later in C5/C6) ---
+        discipline: snap.discipline || '—',
+        runsPerAthlete: (snap.runsPerAthlete ?? snap.runs_per_round ?? 2),
+        tricksPerRound: (snap.tricksPerRound ?? snap.tricks_per_round ?? 0),
+        advancementTopN: (snap.advancementTopN ?? 0),
+        scoringFormat: snap.scoringFormat || (snap.scoring && snap.scoring.format) || 'overall_impression',
+        judgesPanel: [],          // judge IDs/names will be confirmed later (C3a)
+        slots: []                 // athlete assignment happens later (C5)
+      };
+
+      heatsData.heats.push(newHeat);
+      State.setJSON(heatsKey, heatsData);
+      UI.toast(`Added ${newHeat.name}`);
+      renderHeats();
+    };
+
+
+    renderHeats();
+  </script>
+</body>
+
+</html>
