@@ -213,6 +213,84 @@
 
     const container = document.getElementById('heatsContainer');
     const emptyBox = document.getElementById('heatsEmpty');
+    const rosterKey = State.keys.athletes(cid);
+
+    const getJudgeRolesFromStore = () => {
+      const raw = State.getJSON(State.keys.judges(cid), null);
+      if (Array.isArray(raw?.roles) && raw.roles.length) return raw.roles.slice();
+      if (Array.isArray(raw?.judges) && raw.judges.length) {
+        return raw.judges.map(j => j.jid || j.id || j.role || '').filter(Boolean);
+      }
+      if (Array.isArray(raw) && raw.length) {
+        return raw.map(j => j.jid || j.id || j.role || '').filter(Boolean);
+      }
+      return [];
+    };
+
+    const loadRoster = () => {
+      const raw = State.getJSON(rosterKey, []);
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.athletes)) return raw.athletes;
+      return [];
+    };
+
+    const computeDefaultHeatSize = () => {
+      if (Number(heatsData.defaultSize)) return Number(heatsData.defaultSize);
+      const snap = (typeof getPresetSnap === 'function' ? getPresetSnap() : null) || {};
+      if (Number(snap.heatSize)) return Number(snap.heatSize);
+      if (Number(snap.defaultHeatSize)) return Number(snap.defaultHeatSize);
+      return 0;
+    };
+
+    const refreshHeatsData = () => {
+      heatsData = State.getJSON(heatsKey, { heats: [] });
+    };
+
+    const ensureSlots = () => {
+      refreshHeatsData();
+      const heatsList = Array.isArray(heatsData.heats) ? heatsData.heats : [];
+      if (!heatsList.length) return;
+
+      const roster = loadRoster();
+      const totalHeats = heatsList.length || 1;
+      const templateSize = computeDefaultHeatSize();
+      const perHeat = templateSize || (roster.length ? Math.ceil(roster.length / totalHeats) : 0);
+
+      const groups = [];
+      if (perHeat > 0 && roster.length) {
+        roster.forEach((ath, idx) => {
+          const g = Math.floor(idx / perHeat);
+          (groups[g] || (groups[g] = [])).push(ath);
+        });
+      }
+
+      const updated = heatsList.map((heat, idx) => {
+        const next = Object.assign({}, heat);
+        const hasSlots = Array.isArray(next.slots) && next.slots.length > 0;
+        if (!hasSlots) {
+          const source = groups[idx] || [];
+          if (source.length) {
+            next.slots = source.map((ath, laneIdx) => ({
+              lane: laneIdx + 1,
+              aid: ath.aid || ath.id || ath.code || null,
+              name: ath.name || ath.displayName || ath.fullName || null
+            }));
+          } else if (perHeat > 0) {
+            next.slots = Array.from({ length: perHeat }, (_, laneIdx) => ({ lane: laneIdx + 1, aid: null, name: null }));
+          } else {
+            next.slots = [];
+          }
+        }
+        if (next.attemptsPerAthlete == null) {
+          const snap = (typeof getPresetSnap === 'function' ? getPresetSnap() : null) || {};
+          next.attemptsPerAthlete = snap.runsPerAthlete ?? snap.runs_per_round ?? next.runsPerAthlete ?? 1;
+        }
+        return next;
+      });
+
+      State.setJSON(heatsKey, Object.assign({}, heatsData, { heats: updated }));
+      refreshHeatsData();
+    };
 
     document.getElementById('seedJudgesBtn').onclick = () => {
       const key = State.keys.judges(cid);
@@ -229,11 +307,21 @@
       cur.roles = Array.from({ length: presetSize }, (_, i) => `J${i + 1}`);
       State.setJSON(key, cur);
 
-      UI.toast(`Overridden judges: ${presetSize} role(s) from preset`);
+      // Attach judges panel to all heats for Run Console readiness
+      refreshHeatsData();
+      if (Array.isArray(heatsData.heats) && heatsData.heats.length) {
+        const updated = heatsData.heats.map(h => Object.assign({}, h, { judgesPanel: cur.roles.slice() }));
+        State.setJSON(heatsKey, Object.assign({}, heatsData, { heats: updated }));
+        refreshHeatsData();
+        renderHeats();
+      }
+
+      UI.toast(`Overridden judges: ${presetSize} role(s) from preset and linked to heats`);
     };
 
 
     function renderHeats() {
+      refreshHeatsData();
       container.querySelectorAll('.heat-item').forEach(el => el.remove());
       if (!heatsData.heats.length) {
         emptyBox.style.display = 'block';
@@ -244,15 +332,20 @@
       heatsData.heats.forEach((h, i) => {
         const row = document.createElement('div');
         row.className = 'heat-item';
+        const judgeCount = Array.isArray(h.judgesPanel) ? h.judgesPanel.length : (Number(h.judgesCount) || 0);
+        const slotsAssigned = Array.isArray(h.slots) ? h.slots.filter(s => s && s.aid).length : 0;
         row.innerHTML = `
   <div style="display:flex;flex-direction:column;">
     <span>Heat ${i + 1}</span>
     <div class="muted" style="font-size:12px;margin-top:4px;">
       ${h.discipline || '—'} • Runs: ${h.runsPerAthlete ?? '—'} • Tricks: ${h.tricksPerRound ?? '—'} • Adv: ${h.advancementTopN ?? '—'} • ${h.scoringFormat || '—'}
     </div>
+    <div class="muted" style="font-size:12px;margin-top:4px;">
+      Judges: ${judgeCount || '—'} • Slots seeded: ${slotsAssigned}
+    </div>
   </div>
   <div class="heat-actions">
-    <a href="${Core.buildUrl('run_console.html', { cid, eid, heat: i + 1 })}">Open</a>
+    <a href="${Core.buildUrl('run_console.html', { cid, eid, heat: h.id || h.heatId || (i + 1) })}">Open</a>
     <a href="#" data-index="${i}" class="delHeat">Delete</a>
   </div>
 `;
@@ -263,7 +356,7 @@
       document.querySelectorAll('.delHeat').forEach(btn => {
         btn.onclick = e => {
           e.preventDefault();
-          const i = parseInt(btn.dataset.index);
+          const i = parseInt(btn.dataset.index, 10);
           heatsData.heats.splice(i, 1);
           State.setJSON(heatsKey, heatsData);
           UI.toast('Heat deleted');
@@ -274,7 +367,12 @@
 
     document.getElementById('addHeatBtn').onclick = () => {
       const snap = getPresetSnap() || {};
-      const nextNum = heatsData.heats.length + 1;
+      refreshHeatsData();
+      const nextNum = (Array.isArray(heatsData.heats) ? heatsData.heats.length : 0) + 1;
+
+      const judgeRoles = getJudgeRolesFromStore();
+      const rounds = Array.isArray(snap.rounds) ? snap.rounds : [];
+      const roundLabel = rounds[nextNum - 1] || rounds[0] || '';
 
       const newHeat = {
         id: Core.uid('HEAT'),
@@ -287,17 +385,24 @@
         tricksPerRound: (snap.tricksPerRound ?? snap.tricks_per_round ?? 0),
         advancementTopN: (snap.advancementTopN ?? 0),
         scoringFormat: snap.scoringFormat || (snap.scoring && snap.scoring.format) || 'overall_impression',
-        judgesPanel: [],          // judge IDs/names will be confirmed later (C3a)
-        slots: []                 // athlete assignment happens later (C5)
+        dropHighLow: (snap.dropHighLow ?? snap.scoring?.dropHighLow ?? false),
+        judgingScale: snap.judgingScale ?? snap.scoring?.scale ?? 100,
+        attemptsPerAthlete: (snap.runsPerAthlete ?? snap.runs_per_round ?? 1),
+        roundLabel,
+        judgesPanel: judgeRoles.slice(),
+        slots: []
       };
 
-      heatsData.heats.push(newHeat);
-      State.setJSON(heatsKey, heatsData);
+      const nextList = Array.isArray(heatsData.heats) ? heatsData.heats.slice() : [];
+      nextList.push(newHeat);
+      State.setJSON(heatsKey, Object.assign({}, heatsData, { heats: nextList }));
       UI.toast(`Added ${newHeat.name}`);
+      ensureSlots();
       renderHeats();
     };
 
 
+    ensureSlots();
     renderHeats();
   </script>
 </body>
