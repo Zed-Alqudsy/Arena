@@ -17,19 +17,53 @@ Core.requireParams(['cid','eid'],'competition_home.html');
 const cid = Core.getParam('cid'), eid = Core.getParam('eid');
 document.getElementById('tags').textContent = `cid=${cid} • eid=${eid}`;
 
-const heats = State.arr(State.keys.heats(cid,eid));
+const heatKey = State.keys.heats(cid, eid);
+const shell = State.getJSON(heatKey, { heats: [] });
+const heats = Array.isArray(shell?.heats) ? shell.heats : [];
+const events = State.arr(State.keys.events(cid));
+const event = events.find(ev => String(ev.eid) === String(eid)) || {};
+const presetSnap = event?.preset || State.getJSON('preset_snapshot_' + cid, null);
+const rounds = Array.isArray(shell?.rounds) ? shell.rounds
+  : Array.isArray(event?.rounds) ? event.rounds
+  : (Array.isArray(presetSnap?.rounds) ? presetSnap.rounds : []);
+
 const list = document.getElementById('list');
 if (!heats.length) {
   // skeleton: show 2 placeholder heats; no writes
-  ['Heat A','Heat B'].forEach((h,i)=>{
+  ['Heat A', 'Heat B'].forEach((h, i) => {
     const el = document.createElement('div');
-    el.className='card'; el.innerHTML=`<h3>${h}</h3><a class="btn primary" href="${Core.buildUrl('run_console.html',{cid,eid,heat:'H'+(i+1)})}">Open</a>`;
+    el.className = 'card';
+    el.innerHTML = `<h3>${h}</h3>
+      <p class="muted">Round: —</p>
+      <p class="muted">Status: Not Started</p>
+      <a class="btn primary" href="${Core.buildUrl('run_console.html', { cid, eid, heat: 'H' + (i + 1) })}">Open</a>`;
     list.appendChild(el);
   });
 } else {
-  heats.forEach(h=>{
+  heats.forEach((heatObj, idx) => {
     const el = document.createElement('div');
-    el.className='card'; el.innerHTML=`<h3>${h.name}</h3><a class="btn primary" href="${Core.buildUrl('run_console.html',{cid,eid,heat:h.id})}">Open</a>`;
+    el.className = 'card';
+    const heatNumber = idx + 1;
+    const heatName = heatObj.name && heatObj.name !== `Heat ${heatNumber}`
+      ? `${heatObj.name}` : `Heat ${heatNumber}`;
+    const roundLabel = heatObj.roundLabel || heatObj.round || rounds[idx] || rounds[0] || `Round ${heatNumber}`;
+    const statusRaw = heatObj.status || 'Not Started';
+    const statusNorm = (() => {
+      const lower = String(statusRaw).toLowerCase();
+      if (lower === 'running') return 'Running';
+      if (['done', 'completed', 'complete', 'finalised', 'finalized'].includes(lower)) return 'Completed';
+      return typeof statusRaw === 'string' && statusRaw.trim() ? statusRaw : 'Not Started';
+    })();
+    const heatParam = heatObj.id || heatObj.heatId || heatObj.code || String(heatNumber);
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0 0 .35rem 0;">${heatName}</h3>
+          <div class="muted" style="font-size:14px;">Round: ${roundLabel}</div>
+          <div class="muted" style="font-size:14px; margin-top:4px;">Status: ${statusNorm}</div>
+        </div>
+        <a class="btn primary" href="${Core.buildUrl('run_console.html', { cid, eid, heat: heatParam })}">Open</a>
+      </div>`;
     list.appendChild(el);
   });
 }
