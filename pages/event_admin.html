@@ -123,7 +123,9 @@
       <div class="card">
         <h3>Preset Summary</h3>
         <div id="presetSummary" class="muted">No preset detected.</div>
-        <div id="disciplineMismatch" style="display:none;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#9a3412;font-size:13px;"></div>
+        <div id="disciplineMismatch"
+          style="display:none;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#9a3412;font-size:13px;">
+        </div>
       </div>
 
       <div class="card">
@@ -163,6 +165,35 @@
     Core.requireParams(['cid', 'eid'], 'competition_home.html');
     const cid = Core.getParam('cid'), eid = Core.getParam('eid');
     document.getElementById('tags').textContent = `cid=${cid} • eid=${eid}`;
+
+    // defined early so all IIFEs can use it (single source of truth)
+    const lockStatus = {
+      preset: false,
+      discipline: true,
+      heat: true,
+      roster: true,
+      consistency: true,
+      roles: true,
+      policies: true,
+      presetsAudited: true
+    };
+
+    function maybeLockEvent() {
+      try {
+        if (State.isEventLocked && State.isEventLocked(cid)) return;
+        const allOk = Object.values(lockStatus).every(Boolean);
+        if (!allOk) return;
+        if (State.lockEvent) State.lockEvent(cid);
+        else localStorage.setItem(`event_lock_${cid}`, 'true');
+        console.log('Event locked (post-validation)', { cid, eid });
+        try { UI.toast('Event locked (post-validation)'); } catch (_) { }
+      } catch (err) {
+        console.warn('Failed to evaluate lock state', err);
+      }
+    }
+
+    // --- Judges readiness check (read-only; non-blocking) ---
+
     // --- Judges readiness check (read-only; non-blocking) ---
     try {
       const judges = State.arr(State.keys.judges(cid)); // reads judges_<CID>
@@ -274,22 +305,8 @@
 
     const container = document.getElementById('heatsContainer');
     const emptyBox = document.getElementById('heatsEmpty');
-    const lockStatus = { preset: false, discipline: true, heat: true, roster: true, consistency: true, roles: true };
+    maybeLockEvent();
 
-    (function runConsistencyAudit() {
-      try {
-        if (window.SyncLocal && typeof window.SyncLocal.verifyPhaseConsistency === 'function') {
-          const report = window.SyncLocal.verifyPhaseConsistency(cid, eid);
-          lockStatus.consistency = !!(report && report.ok);
-        } else {
-          lockStatus.consistency = false;
-        }
-      } catch (err) {
-        lockStatus.consistency = false;
-        console.warn('Consistency audit unavailable', err);
-      }
-      maybeLockEvent();
-    })();
 
     document.getElementById('seedJudgesBtn').onclick = () => {
       const key = State.keys.judges(cid);
