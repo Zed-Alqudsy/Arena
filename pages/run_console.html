@@ -204,6 +204,7 @@
         <div class="row muted" style="margin-top:.5rem">
           <span id="activeHeatDebug"></span>
         </div>
+        <div id="policyInfo" class="muted" style="margin-top:.75rem;font-size:13px;"></div>
       </div>
 
       <!-- JUDGE LINKS (reference only; Step 4 will make real judge page) -->
@@ -236,13 +237,7 @@
             <!-- Manual Scores (pilot) -->
             <div style="margin-top:.75rem">
               <div class="muted">Manual Scores (pilot)</div>
-              <div class="judge-grid">
-                <input id="ms_J1" placeholder="J1 total">
-                <input id="ms_J2" placeholder="J2 total">
-                <input id="ms_J3" placeholder="J3 total">
-                <input id="ms_J4" placeholder="J4 total">
-                <input id="ms_J5" placeholder="J5 total">
-              </div>
+              <div id="manualScoresWrap" style="margin-top:.5rem;overflow:auto;"></div>
               <div class="row" style="margin-top:.5rem">
                 <button id="btnSaveManual" class="btn">Save Manual Scores</button>
                 <span class="muted">Writes to scores_<cid>_<eid>_<heat></span>
@@ -304,7 +299,7 @@
         <div style="margin-top:.5rem;overflow:auto">
           <table class="table" id="tblScores">
             <thead>
-              <tr>
+              <tr id="scoreHeadRow">
                 <th>Judge</th>
                 <th>Athlete</th>
                 <th>Total</th>
@@ -355,6 +350,47 @@
         };
         const el = id => document.getElementById(id);
         const now = () => new Date().toLocaleTimeString();
+        const critSlug = (s) => String(s || '').toLowerCase().replace(/\s+/g, '_');
+
+        function getCriteria() {
+          try {
+            const raw = JSON.parse(localStorage.getItem(`scoring_${cid}`) || 'null');
+            const arr = raw && Array.isArray(raw.criteria) ? raw.criteria : [];
+            return arr.map((c, idx) => ({
+              label: c?.label || c?.id || `Criterion ${idx + 1}`,
+              weight: Number(c?.weight || 0),
+              slug: critSlug(c?.label || c?.id || `criterion_${idx + 1}`)
+            }));
+          } catch (_) {
+            return [];
+          }
+        }
+
+        function computeFromCriteria(meta, bag) {
+          if (!meta || !meta.length || !bag) return NaN;
+          let sum = 0, sumW = 0;
+          const fallback = [];
+          meta.forEach((c) => {
+            const val = Number(bag[c.slug]);
+            if (Number.isFinite(val)) {
+              fallback.push(val);
+              const w = Number(c.weight) || 0;
+              if (w > 0) { sum += val * w; sumW += w; }
+            }
+          });
+          if (sumW > 0) return sum / sumW;
+          if (fallback.length) return fallback.reduce((a, b) => a + b, 0) / fallback.length;
+          return NaN;
+        }
+
+        function getJudgeRoles() {
+          const store = LS.get(k.judges, null);
+          if (Array.isArray(store?.roles) && store.roles.length) return store.roles;
+          if (Array.isArray(store?.judges) && store.judges.length) {
+            return store.judges.map(j => j?.jid || j?.id).filter(Boolean);
+          }
+          return ['J1', 'J2', 'J3', 'J4', 'J5'];
+        }
 
         // ---------- TV LAUNCHER (one URL per screen) ----------
         function openTVDisplay(screen) {
@@ -422,6 +458,66 @@
         el('jud').textContent = `Judges: ${_judCount}`;
         el('lblHeatStatus').textContent = heatRec.status || 'Not Started';
         el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active) || {})})`;
+        (function disciplineGuard() {
+          try {
+            const events = State.arr(State.keys.events(cid));
+            const ev = events.find(e => e.eid === eid) || {};
+            const eventDisc = ((ev?.preset?.discipline || ev?.discipline || '')).trim();
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const presetDisc = ((snap?.discipline || '')).trim();
+            if (presetDisc && eventDisc && presetDisc.toLowerCase() !== eventDisc.toLowerCase()) {
+              const host = document.querySelector('.card-status .kv');
+              if (host) {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.style.background = '#fff7ed';
+                badge.style.color = '#9a3412';
+                badge.textContent = '⚠ Discipline mismatch';
+                host.appendChild(badge);
+              }
+              console.warn(`⚠ Discipline mismatch: preset=${presetDisc} / event=${eventDisc}`, { cid, eid, heat });
+            }
+          } catch (_) { }
+        })();
+        (function policyInfo() {
+          const box = document.getElementById('policyInfo');
+          if (!box) return;
+          try {
+            const events = State.arr(State.keys.events(cid));
+            const ev = events.find(e => e.eid === eid) || {};
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const policy = ev?.preset?.policy || snap?.policy || ev?.policies || {};
+            const keys = ['tiebreak', 'rerun', 'retry'];
+            const hasAny = keys.some(key => {
+              const raw = policy?.[key];
+              return raw != null && String(raw).trim() !== '';
+            });
+            if (!hasAny) {
+              box.textContent = 'Policies not defined.';
+              console.warn('Policies not defined', { cid, eid });
+              return;
+            }
+            const parts = keys.map(key => {
+              const raw = policy?.[key];
+              const text = raw != null && String(raw).trim() !== '' ? String(raw) : '—';
+              return `<span style="text-transform:capitalize;">${key}</span>: ${text}`;
+            });
+            box.innerHTML = `<span style="color:#2563eb;font-weight:600;">Policy</span> · ${parts.join(' • ')}`;
+            console.log('✅ Policies loaded from preset', policy);
+          } catch (err) {
+            box.textContent = 'Policies unavailable.';
+            console.warn('Failed to load policy info', err);
+          }
+        })();
+        (function consistencyCheck() {
+          try {
+            if (window.SyncLocal && typeof window.SyncLocal.verifyPhaseConsistency === 'function') {
+              window.SyncLocal.verifyPhaseConsistency(cid, eid);
+            }
+          } catch (err) {
+            console.warn('Consistency check invocation failed', err);
+          }
+        })();
         // ---- D0.4: non-blocking judges mismatch indicator (preset vs store) ----
         (function () {
           try {
@@ -559,7 +655,73 @@
           el('lblHeatStatus').textContent = status;
         }
 
+        function renderCriteriaHeader() {
+          const tbl = el('tblScores');
+          const headRow = tbl ? tbl.querySelector('thead tr') : null;
+          if (!headRow) return;
+          const criteria = getCriteria();
+          const labels = ['Judge', 'Athlete', ...criteria.map(c => c.label || 'Criterion'), 'Total', 'Time'];
+          headRow.innerHTML = labels.map(lbl => `<th>${lbl}</th>`).join('');
+        }
+
+        function renderManualScoresForm() {
+          const wrap = document.getElementById('manualScoresWrap');
+          if (!wrap) return;
+          const criteria = getCriteria();
+          const judgesList = getJudgeRoles();
+          if (!judgesList.length) {
+            wrap.innerHTML = '<div class="muted">No judges configured.</div>';
+            return;
+          }
+          const table = document.createElement('table');
+          table.className = 'table';
+          const thead = document.createElement('thead');
+          const hRow = document.createElement('tr');
+          const headCells = ['Judge', ...criteria.map(c => c.label || 'Criterion'), 'Total'];
+          hRow.innerHTML = headCells.map(lbl => `<th>${lbl}</th>`).join('');
+          thead.appendChild(hRow);
+          const tbody = document.createElement('tbody');
+          judgesList.forEach((jid) => {
+            const tr = document.createElement('tr');
+            const cells = [`<td>${jid}</td>`];
+            criteria.forEach((c) => {
+              cells.push(`<td><input type="number" step="0.01" data-jid="${jid}" data-crit="${c.slug}" placeholder="${c.label}"></td>`);
+            });
+            cells.push(`<td><input type="number" step="0.01" data-total-jid="${jid}" placeholder="Total"></td>`);
+            tr.innerHTML = cells.join('');
+            tbody.appendChild(tr);
+          });
+          table.appendChild(thead);
+          table.appendChild(tbody);
+          wrap.innerHTML = '';
+          wrap.appendChild(table);
+          if (!wrap._wired) {
+            wrap.addEventListener('input', (ev) => {
+              const target = ev.target;
+              if (!target || !target.hasAttribute('data-crit')) return;
+              const jid = target.getAttribute('data-jid');
+              if (!jid) return;
+              const criteriaNow = getCriteria();
+              const bag = {};
+              criteriaNow.forEach((c) => {
+                const field = wrap.querySelector(`input[data-jid="${jid}"][data-crit="${c.slug}"]`);
+                const val = Number(field?.value);
+                if (Number.isFinite(val)) bag[c.slug] = val;
+              });
+              const computed = computeFromCriteria(criteriaNow, bag);
+              if (!Number.isFinite(computed)) return;
+              const totalField = wrap.querySelector(`input[data-total-jid="${jid}"]`);
+              if (totalField) totalField.value = computed.toFixed(2);
+            });
+            wrap._wired = true;
+          }
+        }
+
+        renderCriteriaHeader();
+        renderManualScoresForm();
+
         function refreshScoresTable() {
+          renderCriteriaHeader();
           // 1) read both shapes
           const raw = LS.get(k.scores, { results: [] });
           const rows = Array.isArray(raw) ? raw : (Array.isArray(raw.results) ? raw.results : []);
@@ -582,6 +744,8 @@
             return (!aid || rAid === String(aid));
           });
 
+          const criteriaMeta = getCriteria();
+
           list.forEach(r => {
             const jid = (r.judgeId || r.jid || '-').toString();
             const name = (athletes.find(a => (a.aid || a.id) == (r.athleteId || r.aid)) || {}).name
@@ -590,20 +754,11 @@
             const totalNum = (() => {
               if (typeof r.total === 'number') return r.total;
 
-              // read scoring weights from setup
-              const scoring = JSON.parse(localStorage.getItem(`scoring_${cid}`) || '{}');
-              const criteria = scoring.criteria || [];
               const s = r.totals || r.scores || {};
 
-              if (criteria.length) {
-                let sum = 0, sumW = 0;
-                criteria.forEach(c => {
-                  const key = c.label.toLowerCase().replace(/\s+/g, '_');
-                  const val = parseFloat(s[key]);
-                  const w = parseFloat(c.weight) || 1;
-                  if (!isNaN(val)) { sum += val * w; sumW += w; }
-                });
-                return sumW ? (sum / sumW) : NaN;
+              if (criteriaMeta.length) {
+                const computed = computeFromCriteria(criteriaMeta, s);
+                if (Number.isFinite(computed)) return computed;
               }
 
               const nums = Object.values(s).map(Number).filter(Number.isFinite);
@@ -615,7 +770,15 @@
 
             if (tbody) {
               const tr = document.createElement('tr');
-              tr.innerHTML = `<td>${jid}</td><td>${name}</td><td>${total}</td><td>${time}</td>`;
+              const bag = r.totals || r.scores || {};
+              const cells = [jid, name];
+              criteriaMeta.forEach((c) => {
+                const raw = bag ? bag[c.slug] : undefined;
+                const num = Number(raw);
+                cells.push(Number.isFinite(num) ? num.toFixed(2) : (raw ?? '—'));
+              });
+              cells.push(total, time || '');
+              tr.innerHTML = cells.map(v => `<td>${v === '' ? '—' : v}</td>`).join('');
               tbody.appendChild(tr);
             }
           });
@@ -627,34 +790,14 @@
           // Compute "Final (current athlete)" with dynamic-criteria support
           // 1) If row has r.total, use it. 2) Else recompute using scoring_<cid> weights.
           //    Falls back to simple mean of any numeric fields if scoring_<cid> missing.
-          const _qs = new URLSearchParams(location.search);
-          const _cid = _qs.get('cid') || '';
-          let _criteria = [];
-          try {
-            const _scRaw = localStorage.getItem('scoring_' + _cid);
-            if (_scRaw) {
-              const _sc = JSON.parse(_scRaw);
-              const arr = Array.isArray(_sc?.criteria) ? _sc.criteria : [];
-              _criteria = arr.map(c => ({
-                slug: String(c.label || c.id || '').toLowerCase().replace(/\s+/g, '_'),
-                w: Number(c.weight) || 1
-              })).filter(x => x.slug);
-            }
-          } catch (_) { }
-
           const totals = list.map(r => {
             if (typeof r.total === 'number') return r.total;
 
             // accept either r.totals or r.scores
             const s = r.totals || r.scores || {};
-            // if we have scoring config, do weighted recompute by slugs
-            if (_criteria.length) {
-              let sum = 0, wsum = 0;
-              for (const { slug, w } of _criteria) {
-                const v = Number(s[slug]);
-                if (Number.isFinite(v)) { sum += v * w; wsum += w; }
-              }
-              if (wsum > 0) return sum / wsum;
+            if (criteriaMeta.length) {
+              const computed = computeFromCriteria(criteriaMeta, s);
+              if (Number.isFinite(computed)) return computed;
             }
             // fallback: mean of any numeric fields present
             const vals = Object.values(s).map(Number).filter(Number.isFinite);
@@ -683,28 +826,57 @@
 
         function saveManualScores() {
           const aid = selAthlete.value;
+          if (!aid) { log('No manual save: athlete not selected'); return; }
           const nowStr = now();
-          const inputs = ['J1', 'J2', 'J3', 'J4', 'J5'].map(jid => {
-            const v = document.getElementById(`ms_${jid}`)?.value?.trim();
-            return { jid, val: v };
-          }).filter(x => x.val !== '' && x.val != null);
+          const wrap = document.getElementById('manualScoresWrap');
+          const criteriaMeta = getCriteria();
+          const judgeList = getJudgeRoles();
+          const rowsPending = [];
+          judgeList.forEach((jid) => {
+            const bag = {};
+            let hasBag = false;
+            criteriaMeta.forEach((c) => {
+              const field = wrap?.querySelector(`input[data-jid="${jid}"][data-crit="${c.slug}"]`);
+              const raw = field?.value?.trim();
+              if (!raw) return;
+              const num = Number(raw);
+              if (Number.isFinite(num)) {
+                bag[c.slug] = num;
+                hasBag = true;
+              }
+            });
+            const totalField = wrap?.querySelector(`input[data-total-jid="${jid}"]`);
+            let totalVal = totalField?.value?.trim() || '';
+            let totalNum = totalVal ? Number(totalVal) : NaN;
+            if (!Number.isFinite(totalNum)) {
+              const computed = computeFromCriteria(criteriaMeta, bag);
+              if (Number.isFinite(computed)) totalNum = computed;
+            }
+            if (!hasBag && !Number.isFinite(totalNum)) return;
+            rowsPending.push({ jid, bag, total: Number.isFinite(totalNum) ? totalNum : null });
+          });
 
-          if (!inputs.length) { log('No manual scores entered'); return; }
+          if (!rowsPending.length) { log('No manual scores entered'); return; }
 
           const store = LS.get(k.scores, { results: [] });
           store.results = store.results || [];
 
-          inputs.forEach(({ jid, val }) => {
-            const num = parseFloat(val);
-            if (isNaN(num)) return;
-            // Replace existing entry for this judge+athlete in this heat
-            const idx = store.results.findIndex(r => String(r.jid) === jid && String(r.aid) === String(aid));
-            const row = { jid, aid, total: num, time: nowStr };
+          rowsPending.forEach(({ jid, bag, total }) => {
+            const row = {
+              aid,
+              judgeId: jid,
+              jid,
+              time: nowStr
+            };
+            if (bag && Object.keys(bag).length) row.totals = bag;
+            if (Number.isFinite(total)) row.total = +Number(total).toFixed(2);
+            const idx = store.results.findIndex(r => String(r.aid || r.athleteId) === String(aid)
+              && String(r.judgeId || r.jid) === String(jid));
             if (idx >= 0) store.results[idx] = row; else store.results.push(row);
           });
 
           LS.set(k.scores, store);
-          log(`SAVE manual scores for aid=${aid}`);
+          log(`SAVE manual scores for aid=${aid} (${rowsPending.length})`);
           refreshScoresTable();
         }
 
@@ -888,13 +1060,15 @@
         el('btnStart').onclick = () => {
           LS.set(k.active, { cid, eid, heat });
           setHeatStatus('Running');
+          const wrap = document.getElementById('manualScoresWrap');
+          if (wrap) wrap.querySelectorAll('input').forEach(inp => { inp.disabled = false; });
           el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active))})`;
           log(`START heat=${heat}`);
         };
         el('btnLock').onclick = () => {
           setHeatStatus('Completed');
-          // disable manual inputs after lock
-          ['J1', 'J2', 'J3', 'J4', 'J5'].forEach(id => { const inp = document.getElementById(`ms_${id}`); if (inp) inp.disabled = true; });
+          const wrap = document.getElementById('manualScoresWrap');
+          if (wrap) wrap.querySelectorAll('input').forEach(inp => { inp.disabled = true; });
           log('LOCK');
         };
         el('btnReveal').onclick = publishReveal;
@@ -946,6 +1120,14 @@
           }
           if (ev.key === k.display('live1') || ev.key === k.display('live2')) {
             updateDisplayStatuses();
+          }
+          if (ev.key === k.judges) {
+            renderManualScoresForm();
+          }
+          if (ev.key === `scoring_${cid}`) {
+            renderCriteriaHeader();
+            renderManualScoresForm();
+            refreshScoresTable();
           }
         });
 

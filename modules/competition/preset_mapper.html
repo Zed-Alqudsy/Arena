@@ -34,6 +34,37 @@
       const tableBody = document.getElementById('presetTableBody');
       const saveBtn = document.getElementById('saveBtn');
 
+      function auditPresetSnapshot() {
+        if (!cid) return;
+        const events = State.arr(State.keys.events(cid));
+        events.forEach(ev => {
+          if (ev?.preset) {
+            console.log('Preset linked for event', { cid, eid: ev.eid, preset: ev.preset?.name || ev.preset?.id || 'custom' });
+          } else {
+            console.warn('Event missing preset linkage', { cid, eid: ev?.eid });
+          }
+        });
+        const snap = State.ensurePresetSnapshot ? State.ensurePresetSnapshot(cid) : null;
+        if (snap) {
+          console.log(`✅ Presets audited (${events.length} events)`, { cid });
+        } else {
+          console.warn('⚠ Preset snapshot missing and no event preset available', { cid });
+        }
+      }
+
+      auditPresetSnapshot();
+
+      function evaluatePreset(p) {
+        const missing = [];
+        if (!p || typeof p !== 'object') return { missing: ['snapshot missing'], preset: null };
+        if (!(Number(p.runsPerAthlete) > 0)) missing.push('runsPerAthlete');
+        if (!Array.isArray(p.rounds) || p.rounds.length === 0) missing.push('rounds');
+        if (!(Number(p.judges) > 0)) missing.push('judges');
+        if (typeof p.dropHighLow !== 'boolean') missing.push('dropHighLow');
+        if (!(Number(p.advancementTopN) > 0)) missing.push('advancementTopN');
+        return { missing, preset: p };
+      }
+
       // Populate dropdown
       Preset.list().forEach(p => {
         const opt = document.createElement('option');
@@ -58,9 +89,17 @@
       saveBtn.addEventListener('click', () => {
         const id = select.value;
         const p = Preset.get(id);
-        if (!cid || !id || !p) return UI.toast('Missing preset or CID');
+        if (!cid || !id || !p) { UI.toast('Missing preset or CID'); return; }
+        const check = evaluatePreset(p);
+        if (check.missing.length) {
+          console.warn(`⚠ Missing: ${check.missing.join(', ')}`, { cid, presetId: id, preset: p });
+          UI.toast('Preset incomplete: ' + check.missing.join(', '));
+          return;
+        }
         State.setJSON('preset_snapshot_'+cid, p);
+        console.log('✅ Preset complete', { cid, presetId: id });
         UI.toast('Preset saved for CID '+cid);
+        auditPresetSnapshot();
         setTimeout(() => { window.location.href = './setup_new.html?cid='+encodeURIComponent(cid); }, 1000);
       });
     })();
