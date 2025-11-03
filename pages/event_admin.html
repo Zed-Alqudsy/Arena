@@ -10,6 +10,7 @@
   <script src="../shared/core.js"></script>
   <script src="../shared/state.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../core/sync_local.js"></script>
 
   <style>
     body {
@@ -122,6 +123,12 @@
       <div class="card">
         <h3>Preset Summary</h3>
         <div id="presetSummary" class="muted">No preset detected.</div>
+        <div id="disciplineMismatch" style="display:none;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#9a3412;font-size:13px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Officials & Roles</h3>
+        <div id="rolesCard" class="muted">Loading…</div>
       </div>
 
 
@@ -136,6 +143,7 @@
     <div class="card" style="margin-top:24px;">
       <h3>Heats Overview</h3>
       <p class="muted">Manage and review all heats for this event.</p>
+      <div id="rosterAudit" class="muted" style="margin-top:8px;font-size:13px;"></div>
 
       <div id="heatsContainer" style="margin-top:16px;">
         <div id="heatsEmpty" class="muted"
@@ -184,10 +192,14 @@
     (function () {
       const snap = ev?.preset || State.getJSON('preset_snapshot_' + cid, null);
       const el = document.getElementById('presetSummary');
+      const mismatchEl = document.getElementById('disciplineMismatch');
       if (!el) return;
 
       if (!snap) {
         el.textContent = 'No preset detected for this event.';
+        if (mismatchEl) { mismatchEl.style.display = 'none'; mismatchEl.textContent = ''; }
+        lockStatus.preset = false;
+        maybeLockEvent();
         return;
       }
 
@@ -202,6 +214,55 @@
       ];
 
       el.innerHTML = rows.map(([k, v]) => `<div><b>${k}:</b> ${String(v)}</div>`).join('');
+      const audit = State.auditPresetCompleteness ? State.auditPresetCompleteness(cid) : { ok: !!snap, missing: [] };
+      lockStatus.preset = !!audit.ok;
+      if (!audit.ok) {
+        console.warn('Preset completeness issues', audit.missing);
+      }
+      if (mismatchEl) {
+        const presetDisc = (snap.discipline || '').trim();
+        const eventDisc = ((ev?.preset?.discipline || ev?.discipline || '')).trim();
+        if (presetDisc && eventDisc && presetDisc.toLowerCase() !== eventDisc.toLowerCase()) {
+          const msg = `⚠ Discipline mismatch: preset=${presetDisc} / event=${eventDisc}`;
+          mismatchEl.textContent = msg;
+          mismatchEl.style.display = 'block';
+          console.warn(msg, { cid, eid });
+          lockStatus.discipline = false;
+        } else {
+          mismatchEl.style.display = 'none';
+          mismatchEl.textContent = '';
+          lockStatus.discipline = true;
+        }
+      }
+      maybeLockEvent();
+    })();
+
+
+    (function renderRolesCard() {
+      const box = document.getElementById('rolesCard');
+      if (!box) return;
+      try {
+        const roles = State.getRolesRegistry ? State.getRolesRegistry(cid)
+          : (State.ensureRolesRegistry ? State.ensureRolesRegistry(cid) : []);
+        if (!Array.isArray(roles) || !roles.length) {
+          box.textContent = 'No officials registry found.';
+          lockStatus.roles = false;
+          maybeLockEvent();
+          return;
+        }
+        box.innerHTML = roles.map(r => {
+          const suffix = r.contact ? ` <span style="color:#475569">(${r.contact})</span>` : '';
+          const name = r.name || '—';
+          return `<div style="display:flex;justify-content:space-between;gap:12px;"><span><strong>${r.role}</strong></span><span>${name}${suffix}</span></div>`;
+        }).join('');
+        console.log('✅ Roles registry loaded', roles);
+        lockStatus.roles = true;
+      } catch (err) {
+        box.textContent = 'Roles registry unavailable.';
+        console.warn('Failed to load roles registry', err);
+        lockStatus.roles = false;
+      }
+      maybeLockEvent();
     })();
 
 
@@ -213,6 +274,22 @@
 
     const container = document.getElementById('heatsContainer');
     const emptyBox = document.getElementById('heatsEmpty');
+    const lockStatus = { preset: false, discipline: true, heat: true, roster: true, consistency: true, roles: true };
+
+    (function runConsistencyAudit() {
+      try {
+        if (window.SyncLocal && typeof window.SyncLocal.verifyPhaseConsistency === 'function') {
+          const report = window.SyncLocal.verifyPhaseConsistency(cid, eid);
+          lockStatus.consistency = !!(report && report.ok);
+        } else {
+          lockStatus.consistency = false;
+        }
+      } catch (err) {
+        lockStatus.consistency = false;
+        console.warn('Consistency audit unavailable', err);
+      }
+      maybeLockEvent();
+    })();
 
     document.getElementById('seedJudgesBtn').onclick = () => {
       const key = State.keys.judges(cid);
@@ -237,16 +314,30 @@
       container.querySelectorAll('.heat-item').forEach(el => el.remove());
       if (!heatsData.heats.length) {
         emptyBox.style.display = 'block';
+        renderRosterAudit();
         return;
       }
       emptyBox.style.display = 'none';
 
+      const preset = (typeof getPresetSnap === 'function' ? getPresetSnap() : null) || {};
+
+      lockStatus.heat = true;
       heatsData.heats.forEach((h, i) => {
         const row = document.createElement('div');
         row.className = 'heat-item';
+        const check = (State.validateHeatTemplate ? State.validateHeatTemplate(h, preset) : { ok: true, issues: [], details: {} });
+        const statusIcon = check.ok ? '✅' : '⚠';
+        const statusNote = check.ok ? 'Preset aligned' : (check.issues.join('; ') || 'Check heat template');
+        const label = h.name || `Heat ${i + 1}`;
+        if (check.ok) {
+          console.log(`✅ Heat ${label} OK`, check.details);
+        } else {
+          console.warn(`⚠ Heat ${label}: ${check.issues.join('; ')}`, check.details);
+          lockStatus.heat = false;
+        }
         row.innerHTML = `
   <div style="display:flex;flex-direction:column;">
-    <span>Heat ${i + 1}</span>
+    <span title="${statusNote}">${statusIcon} Heat ${i + 1}</span>
     <div class="muted" style="font-size:12px;margin-top:4px;">
       ${h.discipline || '—'} • Runs: ${h.runsPerAthlete ?? '—'} • Tricks: ${h.tricksPerRound ?? '—'} • Adv: ${h.advancementTopN ?? '—'} • ${h.scoringFormat || '—'}
     </div>
@@ -270,6 +361,63 @@
           renderHeats();
         };
       });
+      renderRosterAudit();
+      maybeLockEvent();
+    }
+
+    function renderRosterAudit() {
+      const box = document.getElementById('rosterAudit');
+      if (!box || !State.auditRosterLinkage) return;
+      try {
+        lockStatus.roster = false;
+        const audit = State.auditRosterLinkage(cid, eid);
+        if (!audit) {
+          box.textContent = 'Roster audit unavailable.';
+          maybeLockEvent();
+          return;
+        }
+        if ((!audit.duplicates || !audit.duplicates.length) && (!audit.unassigned || !audit.unassigned.length)) {
+          box.innerHTML = '<span style="color:#16a34a;">✅ All athletes assigned</span>';
+          console.log('✅ All athletes assigned', audit);
+          lockStatus.roster = true;
+        } else {
+          const parts = [];
+          if (audit.duplicates && audit.duplicates.length) {
+            const dup = audit.duplicates.map(d => `${d.aid}×${d.count}`).join(', ');
+            parts.push(`Duplicate: ${dup}`);
+          }
+          if (audit.unassigned && audit.unassigned.length) {
+            parts.push(`Unassigned: ${audit.unassigned.join(', ')}`);
+          }
+          if (audit.emptySlots && audit.emptySlots.length) {
+            const blanks = audit.emptySlots.map(s => `${s.heatName || ('Heat ' + (s.heatIndex + 1))}#${s.position}`).join(', ');
+            parts.push(`Empty slots: ${blanks}`);
+          }
+          box.innerHTML = `<span style="color:#b45309;">⚠ ${parts.join(' • ')}</span>`;
+          console.warn('⚠ Roster linkage issues', audit);
+          lockStatus.roster = false;
+        }
+      } catch (err) {
+        box.textContent = 'Roster audit unavailable.';
+        console.warn('Roster audit failed', err);
+        lockStatus.roster = false;
+      }
+      maybeLockEvent();
+    }
+
+    function maybeLockEvent() {
+      try {
+        if (State.isEventLocked && State.isEventLocked(cid)) return;
+        const allOk = Object.values(lockStatus).every(Boolean);
+        if (allOk) {
+          if (State.lockEvent) State.lockEvent(cid);
+          else localStorage.setItem(`event_lock_${cid}`, 'true');
+          console.log('Event locked (post-validation)', { cid, eid });
+          try { UI.toast('Event locked (post-validation)'); } catch (_) { }
+        }
+      } catch (err) {
+        console.warn('Failed to evaluate lock state', err);
+      }
     }
 
     document.getElementById('addHeatBtn').onclick = () => {
