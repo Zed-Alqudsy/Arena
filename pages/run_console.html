@@ -199,14 +199,12 @@
         <div class="kv">
           <span id="ath" class="tag">Athletes: 0</span>
           <span id="jud" class="tag">Judges: 0</span>
-          <span id="lblRunBadge" class="tag">Run 1 / 1</span>
           <span>Heat Status: <b id="lblHeatStatus" class="badge">Not Started</b></span>
         </div>
-        <div class="row muted" style="margin-top:.5rem;gap:.75rem;flex-wrap:wrap;">
-          <span id="lblRoundInfo"></span>
-          <span id="lblPresetInfo"></span>
+        <div class="row muted" style="margin-top:.5rem">
           <span id="activeHeatDebug"></span>
         </div>
+        <div id="policyInfo" class="muted" style="margin-top:.75rem;font-size:13px;"></div>
       </div>
 
       <!-- JUDGE LINKS (reference only; Step 4 will make real judge page) -->
@@ -236,21 +234,10 @@
                 <input type="checkbox" id="chkDropExtremes"> Drop extremes
               </label>
             </div>
-            <div class="row" style="margin-top:.75rem; gap:.5rem;">
-              <button id="btnPrevRun" class="btn">◀ Prev Run</button>
-              <button id="btnNextRun" class="btn">Next Run ▶</button>
-              <span class="muted" id="lblRunSummary">Run 1 of 1</span>
-            </div>
             <!-- Manual Scores (pilot) -->
             <div style="margin-top:.75rem">
               <div class="muted">Manual Scores (pilot)</div>
-              <div class="judge-grid">
-                <input id="ms_J1" placeholder="J1 total">
-                <input id="ms_J2" placeholder="J2 total">
-                <input id="ms_J3" placeholder="J3 total">
-                <input id="ms_J4" placeholder="J4 total">
-                <input id="ms_J5" placeholder="J5 total">
-              </div>
+              <div id="manualScoresWrap" style="margin-top:.5rem;overflow:auto;"></div>
               <div class="row" style="margin-top:.5rem">
                 <button id="btnSaveManual" class="btn">Save Manual Scores</button>
                 <span class="muted">Writes to scores_<cid>_<eid>_<heat></span>
@@ -309,35 +296,12 @@
             Final (current athlete): <b id="lblFinalScore">—</b>
           </span>
         </div>
-        <div id="standingsBlock" style="margin-top:1rem;">
-          <div class="row" style="gap:.5rem;align-items:center;">
-            <h4 style="margin:0;font-size:1rem;">Heat Standings</h4>
-            <span id="lblAdvancement" class="badge muted">Advancement not set</span>
-          </div>
-          <div style="margin-top:.5rem;overflow:auto;">
-            <table class="table" id="tblStandings">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Athlete</th>
-                  <th>Runs</th>
-                  <th>Best</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="5" class="muted">No scores yet.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div style="margin-top:1.25rem;overflow:auto">
+        <div style="margin-top:.5rem;overflow:auto">
           <table class="table" id="tblScores">
             <thead>
-              <tr>
+              <tr id="scoreHeadRow">
                 <th>Judge</th>
                 <th>Athlete</th>
-                <th>Run</th>
                 <th>Total</th>
                 <th>Time</th>
               </tr>
@@ -386,6 +350,47 @@
         };
         const el = id => document.getElementById(id);
         const now = () => new Date().toLocaleTimeString();
+        const critSlug = (s) => String(s || '').toLowerCase().replace(/\s+/g, '_');
+
+        function getCriteria() {
+          try {
+            const raw = JSON.parse(localStorage.getItem(`scoring_${cid}`) || 'null');
+            const arr = raw && Array.isArray(raw.criteria) ? raw.criteria : [];
+            return arr.map((c, idx) => ({
+              label: c?.label || c?.id || `Criterion ${idx + 1}`,
+              weight: Number(c?.weight || 0),
+              slug: critSlug(c?.label || c?.id || `criterion_${idx + 1}`)
+            }));
+          } catch (_) {
+            return [];
+          }
+        }
+
+        function computeFromCriteria(meta, bag) {
+          if (!meta || !meta.length || !bag) return NaN;
+          let sum = 0, sumW = 0;
+          const fallback = [];
+          meta.forEach((c) => {
+            const val = Number(bag[c.slug]);
+            if (Number.isFinite(val)) {
+              fallback.push(val);
+              const w = Number(c.weight) || 0;
+              if (w > 0) { sum += val * w; sumW += w; }
+            }
+          });
+          if (sumW > 0) return sum / sumW;
+          if (fallback.length) return fallback.reduce((a, b) => a + b, 0) / fallback.length;
+          return NaN;
+        }
+
+        function getJudgeRoles() {
+          const store = LS.get(k.judges, null);
+          if (Array.isArray(store?.roles) && store.roles.length) return store.roles;
+          if (Array.isArray(store?.judges) && store.judges.length) {
+            return store.judges.map(j => j?.jid || j?.id).filter(Boolean);
+          }
+          return ['J1', 'J2', 'J3', 'J4', 'J5'];
+        }
 
         // ---------- TV LAUNCHER (one URL per screen) ----------
         function openTVDisplay(screen) {
@@ -432,112 +437,101 @@
 
 
         // ---------- INIT DATA ----------
-        const heatParamRaw = String(heat);
-        const heatKey = State.keys.heats(cid, eid);
-        const heatsObj = LS.get(heatKey, { heats: [] });
-        const heatList = Array.isArray(heatsObj?.heats) ? heatsObj.heats : [];
-        const eventsList = State.arr(State.keys.events(cid));
-        const currentEvent = eventsList.find(ev => String(ev.eid) === String(eid)) || {};
-        const presetSnap = (() => {
-          if (currentEvent?.preset) return currentEvent.preset;
-          const stored = LS.get('preset_snapshot_' + cid, null);
-          if (stored) return stored;
-          return null;
-        })();
+        const athletes = State.arr(k.athletes);
+        const judges = State.arr(k.judges);
+        // Normalize judges count from store object or array
+        const _judStore = LS.get(k.judges, null);
+        const _judCount =
+          Array.isArray(_judStore) ? _judStore.length :
+            (Array.isArray(_judStore?.roles) ? _judStore.roles.length :
+              (Number(_judStore?.panelSize) || 0));
+        // Update header badge
+        try { el('jud').textContent = `Judges: ${_judCount}`; } catch (_) { }
 
-        const athletesStore = State.getJSON(k.athletes, []);
-        const athletes = Array.isArray(athletesStore) ? athletesStore
-          : (Array.isArray(athletesStore?.athletes) ? athletesStore.athletes : []);
-        const athleteNameById = {};
-        athletes.forEach(a => {
-          const id = String(a.aid || a.id || a.code || a.name || '').trim();
-          if (!id) return;
-          athleteNameById[id] = a.name || a.displayName || a.fullName || id;
-        });
-
-        let heatIdx = -1;
-        let heatRec = null;
-        if (heatList.length) {
-          const asNum = Number(heatParamRaw);
-          if (Number.isInteger(asNum) && asNum >= 1 && asNum <= heatList.length) {
-            heatIdx = asNum - 1;
-            heatRec = heatList[heatIdx];
-          }
-          if (!heatRec) {
-            heatIdx = heatList.findIndex(h =>
-              String(h.id) === heatParamRaw ||
-              String(h.heatId) === heatParamRaw ||
-              String(h.name) === heatParamRaw
-            );
-            if (heatIdx >= 0) heatRec = heatList[heatIdx];
-          }
-        }
-        if (!heatRec) {
-          heatIdx = heatList.length ? 0 : -1;
-          heatRec = heatIdx >= 0 ? heatList[heatIdx] : { status: 'Not Started', slots: [] };
-        }
-        const heatUid = String(heatRec?.id || heatRec?.heatId || heatRec?.name || `IDX_${(heatIdx + 1) || 1}`);
-        const heatSlots = Array.isArray(heatRec?.slots) ? heatRec.slots : [];
-        const roundsList = Array.isArray(heatsObj?.rounds) ? heatsObj.rounds
-          : Array.isArray(currentEvent?.rounds) ? currentEvent.rounds
-          : (Array.isArray(presetSnap?.rounds) ? presetSnap.rounds : []);
-        const roundLabel = heatRec.roundLabel || heatRec.round || roundsList[heatIdx] || roundsList[0] || 'Round';
-
-        const judgesStore = State.getJSON(k.judges, null);
-        const judgeRoles = (() => {
-          if (Array.isArray(heatRec?.judgesPanel) && heatRec.judgesPanel.length) return heatRec.judgesPanel.map(String);
-          if (Array.isArray(judgesStore?.roles) && judgesStore.roles.length) return judgesStore.roles.map(String);
-          if (Array.isArray(judgesStore?.judges) && judgesStore.judges.length) {
-            return judgesStore.judges.map(j => String(j.jid || j.id || j.role || '')).filter(Boolean);
-          }
-          if (Array.isArray(judgesStore) && judgesStore.length) {
-            return judgesStore.map(j => String(j.jid || j.id || j)).filter(Boolean);
-          }
-          const fallbackCount = Number(presetSnap?.judges || judgesStore?.panelSize || presetSnap?.panelSize || 5) || 5;
-          return Array.from({ length: fallbackCount }, (_, i) => `J${i + 1}`);
-        })();
-        const judgeCount = judgeRoles.length;
-
-        const heatConfig = {
-          runsPerAthlete: Math.max(1, Math.round(Number(heatRec.runsPerAthlete ?? heatRec.attemptsPerAthlete ?? presetSnap?.runsPerAthlete ?? presetSnap?.runs_per_round ?? 1) || 1)),
-          tricksPerRound: Number(heatRec.tricksPerRound ?? presetSnap?.tricksPerRound ?? presetSnap?.tricks_per_round ?? 0) || 0,
-          advancementTopN: Number(heatRec.advancementTopN ?? presetSnap?.advancementTopN ?? 0) || 0,
-          scoringFormat: String(heatRec.scoringFormat || presetSnap?.scoringFormat || presetSnap?.scoring?.format || 'overall_impression'),
-          dropHighLow: (heatRec.dropHighLow ?? presetSnap?.dropHighLow ?? presetSnap?.scoring?.dropHighLow ?? false) === true,
-          judgingScale: Number(heatRec.judgingScale ?? presetSnap?.judgingScale ?? presetSnap?.scoring?.scale ?? 100) || 100,
-        };
-        heatConfig.judges = judgeCount;
-
-        const progressKey = `heat_progress_${cid}_${eid}_${heatUid}`;
-        const storedProgress = LS.get(progressKey, null) || heatRec.progress || null;
-        const progress = Object.assign(
-          { currentRun: 1, totalRuns: heatConfig.runsPerAthlete, runScores: {} },
-          (storedProgress && typeof storedProgress === 'object') ? storedProgress : {}
-        );
-        progress.totalRuns = Math.max(1, Math.round(Number(progress.totalRuns || heatConfig.runsPerAthlete || 1)));
-        progress.currentRun = Math.min(Math.max(1, Math.round(Number(progress.currentRun || 1))), progress.totalRuns);
-        if (!progress.runScores || typeof progress.runScores !== 'object') progress.runScores = {};
+        const heatsObj = LS.get(k.heats, { heats: [] });
+        const heatIdx = Math.max(0, Number(heat) - 1);
+        const heatRec = (heatsObj.heats && heatsObj.heats[heatIdx]) ? heatsObj.heats[heatIdx] : { status: 'Not Started' };
 
         // ---------- HEADER/UI SEED ----------
-        el('tags').textContent = `cid=${cid} • eid=${eid} • heat=${heatParamRaw}`;
+        el('tags').textContent = `cid=${cid} • eid=${eid} • heat=${heat}`;
         el('ath').textContent = `Athletes: ${athletes.length}`;
-        el('jud').textContent = `Judges: ${judgeCount}`;
+        el('jud').textContent = `Judges: ${_judCount}`;
         el('lblHeatStatus').textContent = heatRec.status || 'Not Started';
         el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active) || {})})`;
-        if (el('lblRoundInfo')) el('lblRoundInfo').textContent = `Round: ${roundLabel}`;
-        if (el('lblPresetInfo')) {
-          el('lblPresetInfo').textContent = `Runs ${heatConfig.runsPerAthlete} • Tricks ${heatConfig.tricksPerRound} • Adv Top ${heatConfig.advancementTopN || '—'} • Scale ${heatConfig.judgingScale}`;
-        }
-        function updateRunUI() {
-          if (el('lblRunBadge')) el('lblRunBadge').textContent = `Run ${progress.currentRun} / ${progress.totalRuns}`;
-          if (el('lblRunSummary')) el('lblRunSummary').textContent = `Run ${progress.currentRun} of ${progress.totalRuns}`;
-        }
-        updateRunUI();
-
+        (function disciplineGuard() {
+          try {
+            const events = State.arr(State.keys.events(cid));
+            const ev = events.find(e => e.eid === eid) || {};
+            const eventDisc = ((ev?.preset?.discipline || ev?.discipline || '')).trim();
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const presetDisc = ((snap?.discipline || '')).trim();
+            if (presetDisc && eventDisc && presetDisc.toLowerCase() !== eventDisc.toLowerCase()) {
+              const host = document.querySelector('.card-status .kv');
+              if (host) {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.style.background = '#fff7ed';
+                badge.style.color = '#9a3412';
+                badge.textContent = '⚠ Discipline mismatch';
+                host.appendChild(badge);
+              }
+              console.warn(`⚠ Discipline mismatch: preset=${presetDisc} / event=${eventDisc}`, { cid, eid, heat });
+            }
+          } catch (_) { }
+        })();
+        (function policyInfo() {
+          const box = document.getElementById('policyInfo');
+          if (!box) return;
+          try {
+            const events = State.arr(State.keys.events(cid));
+            const ev = events.find(e => e.eid === eid) || {};
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const policy = ev?.preset?.policy || snap?.policy || ev?.policies || {};
+            const keys = ['tiebreak', 'rerun', 'retry'];
+            const hasAny = keys.some(key => {
+              const raw = policy?.[key];
+              return raw != null && String(raw).trim() !== '';
+            });
+            if (!hasAny) {
+              box.textContent = 'Policies not defined.';
+              console.warn('Policies not defined', { cid, eid });
+              return;
+            }
+            const parts = keys.map(key => {
+              const raw = policy?.[key];
+              const text = raw != null && String(raw).trim() !== '' ? String(raw) : '—';
+              return `<span style="text-transform:capitalize;">${key}</span>: ${text}`;
+            });
+            box.innerHTML = `<span style="color:#2563eb;font-weight:600;">Policy</span> · ${parts.join(' • ')}`;
+            console.log('✅ Policies loaded from preset', policy);
+          } catch (err) {
+            box.textContent = 'Policies unavailable.';
+            console.warn('Failed to load policy info', err);
+          }
+        })();
+        (function consistencyCheck() {
+          try {
+            if (window.SyncLocal && typeof window.SyncLocal.verifyPhaseConsistency === 'function') {
+              window.SyncLocal.verifyPhaseConsistency(cid, eid);
+            }
+          } catch (err) {
+            console.warn('Consistency check invocation failed', err);
+          }
+        })();
         // ---- D0.4: non-blocking judges mismatch indicator (preset vs store) ----
         (function () {
           try {
-            const need = Number(presetSnap?.judges || presetSnap?.panelSize || 0);
+            const snap = LS.get('preset_snapshot_' + cid, null);
+            const need = Number(snap?.judges) || 0;
+
+            // _judCount was computed earlier (object/array tolerant). Fallback to roles.length.
+            let have = (typeof _judCount === 'number') ? _judCount : 0;
+            if (!have) {
+              const js = LS.get(k.judges, null);
+              have = Array.isArray(js?.roles) ? js.roles.length :
+                (Array.isArray(js?.judges) ? js.judges.length : (Number(js?.panelSize) || 0));
+            }
+
             const host = document.querySelector('.card-status .kv') || el('jud')?.parentNode;
             if (!host) return;
 
@@ -552,171 +546,17 @@
             badge.textContent = '⚠ Judges Mismatch — Click Prepare';
             host.appendChild(badge);
 
-            if (need && judgeCount && need !== judgeCount) {
+            if (need && have && need !== have) {
               badge.style.display = 'inline-block';
             }
 
             badge.onclick = function () {
-              console.log('PREPARE: align judges from preset', { need, have: judgeCount, cid });
+              // Non-blocking: log intent only (actual prepare step can be run on demand)
+              console.log('PREPARE: align judges from preset', { need, have, cid });
+              // (Optional future: run the D0.2 align snippet here)
             };
           } catch (_) { /* no-op */ }
         })();
-
-
-        const nameFromRoster = (id) => athleteNameById[String(id)] || String(id);
-
-        function persistProgress() {
-          LS.set(progressKey, progress);
-        }
-
-        let latestStandings = { rows: [], advancers: [] };
-
-        function persistHeatSnapshot(extra = {}) {
-          if (heatIdx < 0) return;
-          const obj = LS.get(heatKey, { heats: [] });
-          const arr = Array.isArray(obj.heats) ? obj.heats : [];
-          const base = Object.assign({}, arr[heatIdx] || {});
-          const next = Object.assign(base, {
-            status: base.status || heatRec.status || 'Not Started',
-            runsPerAthlete: heatConfig.runsPerAthlete,
-            tricksPerRound: heatConfig.tricksPerRound,
-            advancementTopN: heatConfig.advancementTopN,
-            scoringFormat: heatConfig.scoringFormat,
-            dropHighLow: heatConfig.dropHighLow,
-            judgingScale: heatConfig.judgingScale,
-            judgesPanel: Array.isArray(judgeRoles) ? judgeRoles.slice() : [],
-            slots: Array.isArray(base.slots) ? base.slots : heatSlots,
-            progress: {
-              currentRun: progress.currentRun,
-              totalRuns: progress.totalRuns,
-              runScores: progress.runScores
-            },
-            advancers: latestStandings.advancers || []
-          }, extra);
-          arr[heatIdx] = next;
-          obj.heats = arr;
-          LS.set(heatKey, obj);
-          heatRec = next;
-        }
-
-        function computeStandings() {
-          const rows = [];
-          const seen = new Set();
-          heatSlots.filter(s => s && s.aid).forEach((slot, idx) => {
-            const aid = String(slot.aid);
-            if (!aid || seen.has(aid)) return;
-            seen.add(aid);
-            rows.push({ aid, name: slot.name || nameFromRoster(aid), lane: slot.lane ?? (idx + 1) });
-          });
-          Object.keys(progress.runScores).forEach(aid => {
-            const key = String(aid);
-            if (seen.has(key)) return;
-            seen.add(key);
-            rows.push({ aid: key, name: nameFromRoster(key), lane: null });
-          });
-
-          const fmt = heatConfig.scoringFormat.toLowerCase();
-          rows.forEach(row => {
-            const runEntries = Array.isArray(progress.runScores[row.aid]) ? progress.runScores[row.aid] : [];
-            row.runs = Array.from({ length: progress.totalRuns }, (_, idx) => {
-              const entry = runEntries[idx];
-              const val = entry && Number.isFinite(Number(entry.final)) ? Number(entry.final) : null;
-              return { run: idx + 1, final: val };
-            });
-            const finals = row.runs.map(r => r.final).filter(v => Number.isFinite(v));
-            if (finals.length) {
-              if (fmt.includes('average')) {
-                const avg = finals.reduce((a, b) => a + b, 0) / finals.length;
-                row.best = +avg.toFixed(2);
-              } else {
-                const max = Math.max(...finals);
-                row.best = +max.toFixed(2);
-              }
-            } else {
-              row.best = null;
-            }
-          });
-
-          rows.sort((a, b) => {
-            const aBest = Number.isFinite(a.best) ? a.best : -Infinity;
-            const bBest = Number.isFinite(b.best) ? b.best : -Infinity;
-            if (bBest !== aBest) return bBest - aBest;
-            return (a.lane ?? Infinity) - (b.lane ?? Infinity);
-          });
-
-          let rankCounter = 1;
-          rows.forEach(row => {
-            if (Number.isFinite(row.best)) {
-              row.rank = rankCounter++;
-            } else {
-              row.rank = null;
-            }
-          });
-
-          const advancers = heatConfig.advancementTopN > 0
-            ? rows.filter(r => Number.isFinite(r.best)).slice(0, heatConfig.advancementTopN).map(r => r.aid)
-            : [];
-          rows.forEach(row => { row.advance = advancers.includes(row.aid); });
-
-          return { rows, advancers };
-        }
-
-        function refreshStandings() {
-          const badge = el('lblAdvancement');
-          if (badge) {
-            badge.textContent = heatConfig.advancementTopN > 0
-              ? `Top ${heatConfig.advancementTopN} advance`
-              : 'Advancement not set';
-          }
-
-          const table = el('tblStandings');
-          const tbody = table ? table.querySelector('tbody') : null;
-          latestStandings = computeStandings();
-
-          if (!tbody) {
-            persistHeatSnapshot();
-            return;
-          }
-
-          if (!latestStandings.rows.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="muted">No scores yet.</td></tr>';
-            persistHeatSnapshot();
-            return;
-          }
-
-          const html = latestStandings.rows.map(row => {
-            const runsText = row.runs.map(r => `R${r.run}:${Number.isFinite(r.final) ? r.final.toFixed(2) : '—'}`).join(' • ') || '—';
-            const bestText = Number.isFinite(row.best) ? row.best.toFixed(2) : '—';
-            const statusCell = row.advance
-              ? '<span class="badge" style="background:#16a34a1a;border:1px solid #16a34a;color:#166534;">Advance</span>'
-              : '<span class="muted">—</span>';
-            return `<tr><td>${row.rank ?? '—'}</td><td>${nameFromRoster(row.aid)}</td><td>${runsText}</td><td>${bestText}</td><td>${statusCell}</td></tr>`;
-          }).join('');
-
-          tbody.innerHTML = html;
-          persistHeatSnapshot();
-        }
-
-        function recordRunScore(aid, runNumber, finalValue) {
-          if (!aid) return;
-          const runIdx = Math.max(0, Math.round(Number(runNumber) || 1) - 1);
-          if (!Array.isArray(progress.runScores[aid])) progress.runScores[aid] = [];
-          progress.runScores[aid][runIdx] = {
-            final: Number.isFinite(finalValue) ? +Number(finalValue).toFixed(2) : null,
-            ts: Date.now()
-          };
-          persistProgress();
-        }
-
-        function setCurrentRun(nextRun) {
-          const target = Math.min(Math.max(1, Math.round(Number(nextRun) || 1)), progress.totalRuns);
-          if (target === progress.currentRun) return;
-          progress.currentRun = target;
-          persistProgress();
-          updateRunUI();
-          refreshScoresTable();
-          persistHeatSnapshot();
-        }
 
 
         // Athletes picker (preset-first: use heat slots order if present)
@@ -733,7 +573,8 @@
           });
 
           // Prefer slots from current heat; fallback to full athletes list
-          const slots = Array.isArray(heatSlots) ? heatSlots : [];
+          const slots = (heatsObj && Array.isArray(heatsObj.heats) && heatsObj.heats[heatIdx] && Array.isArray(heatsObj.heats[heatIdx].slots))
+            ? heatsObj.heats[heatIdx].slots : [];
           const orderedIds = (slots.length ? slots.map(s => String(s.aid)).filter(Boolean)
             : athletes.map(a => String(a.aid || a.id || a.code || a.name)).filter(Boolean));
 
@@ -750,9 +591,6 @@
             selAthlete.value = prev;
           }
         })();
-
-        refreshStandings();
-        refreshScoresTable();
 
         // --- Generate real Judge URLs (self-contained, no external vars needed)
         (function () {
@@ -781,7 +619,10 @@
           var aname = aid ? ((window.nameOfAth && window.nameOfAth(aid)) || id2name[aid] || aid) : '';
 
           // Preset-first roles from judges_<cid> (fallback to J1..J5)
-          var roles = Array.isArray(judgeRoles) && judgeRoles.length ? judgeRoles.slice() : ['J1', 'J2', 'J3', 'J4', 'J5'];
+          var jStore; try { jStore = JSON.parse(localStorage.getItem('judges_' + cid) || 'null'); } catch (_) { jStore = null; }
+          var roles = (Array.isArray(jStore && jStore.roles) && jStore.roles.length) ? jStore.roles
+            : ((Array.isArray(jStore && jStore.judges) && jStore.judges.length) ? jStore.judges.map(function (j) { return j.jid || j.id; }).filter(Boolean)
+              : ['J1', 'J2', 'J3', 'J4', 'J5']);
 
           jWrap.innerHTML = '';
           roles.forEach(function (jid) {
@@ -801,19 +642,86 @@
         })();
 
         // Rules + Scores rehydrate
-        const rules = LS.get(k.rules, { dropExtremes: heatConfig.dropHighLow });
-        if (typeof rules?.dropExtremes === 'boolean') {
-          heatConfig.dropHighLow = !!rules.dropExtremes;
-        }
-        if (el('chkDropExtremes')) el('chkDropExtremes').checked = !!heatConfig.dropHighLow;
+        const rules = LS.get(k.rules, { dropExtremes: false });
+        el('chkDropExtremes').checked = !!rules.dropExtremes;
 
         // ---------- CORE ----------
         function setHeatStatus(status) {
+          const obj = LS.get(k.heats, { heats: [] });
+          obj.heats = obj.heats || [];
+          obj.heats[heatIdx] = obj.heats[heatIdx] || {};
+          obj.heats[heatIdx].status = status;
+          LS.set(k.heats, obj);
           el('lblHeatStatus').textContent = status;
-          persistHeatSnapshot({ status });
         }
 
+        function renderCriteriaHeader() {
+          const tbl = el('tblScores');
+          const headRow = tbl ? tbl.querySelector('thead tr') : null;
+          if (!headRow) return;
+          const criteria = getCriteria();
+          const labels = ['Judge', 'Athlete', ...criteria.map(c => c.label || 'Criterion'), 'Total', 'Time'];
+          headRow.innerHTML = labels.map(lbl => `<th>${lbl}</th>`).join('');
+        }
+
+        function renderManualScoresForm() {
+          const wrap = document.getElementById('manualScoresWrap');
+          if (!wrap) return;
+          const criteria = getCriteria();
+          const judgesList = getJudgeRoles();
+          if (!judgesList.length) {
+            wrap.innerHTML = '<div class="muted">No judges configured.</div>';
+            return;
+          }
+          const table = document.createElement('table');
+          table.className = 'table';
+          const thead = document.createElement('thead');
+          const hRow = document.createElement('tr');
+          const headCells = ['Judge', ...criteria.map(c => c.label || 'Criterion'), 'Total'];
+          hRow.innerHTML = headCells.map(lbl => `<th>${lbl}</th>`).join('');
+          thead.appendChild(hRow);
+          const tbody = document.createElement('tbody');
+          judgesList.forEach((jid) => {
+            const tr = document.createElement('tr');
+            const cells = [`<td>${jid}</td>`];
+            criteria.forEach((c) => {
+              cells.push(`<td><input type="number" step="0.01" data-jid="${jid}" data-crit="${c.slug}" placeholder="${c.label}"></td>`);
+            });
+            cells.push(`<td><input type="number" step="0.01" data-total-jid="${jid}" placeholder="Total"></td>`);
+            tr.innerHTML = cells.join('');
+            tbody.appendChild(tr);
+          });
+          table.appendChild(thead);
+          table.appendChild(tbody);
+          wrap.innerHTML = '';
+          wrap.appendChild(table);
+          if (!wrap._wired) {
+            wrap.addEventListener('input', (ev) => {
+              const target = ev.target;
+              if (!target || !target.hasAttribute('data-crit')) return;
+              const jid = target.getAttribute('data-jid');
+              if (!jid) return;
+              const criteriaNow = getCriteria();
+              const bag = {};
+              criteriaNow.forEach((c) => {
+                const field = wrap.querySelector(`input[data-jid="${jid}"][data-crit="${c.slug}"]`);
+                const val = Number(field?.value);
+                if (Number.isFinite(val)) bag[c.slug] = val;
+              });
+              const computed = computeFromCriteria(criteriaNow, bag);
+              if (!Number.isFinite(computed)) return;
+              const totalField = wrap.querySelector(`input[data-total-jid="${jid}"]`);
+              if (totalField) totalField.value = computed.toFixed(2);
+            });
+            wrap._wired = true;
+          }
+        }
+
+        renderCriteriaHeader();
+        renderManualScoresForm();
+
         function refreshScoresTable() {
+          renderCriteriaHeader();
           // 1) read both shapes
           const raw = LS.get(k.scores, { results: [] });
           const rows = Array.isArray(raw) ? raw : (Array.isArray(raw.results) ? raw.results : []);
@@ -825,43 +733,32 @@
           const drop = el('chkDropExtremes');
           const lblStatus = el('lblScoreStatus');
           const lblFinal = el('lblFinalScore');
-          const runNo = progress.currentRun;
-          if (drop) drop.checked = !!heatConfig.dropHighLow;
-          const judgeCount = judgeRoles.length || 5;
+          // Safe judge count fallback (when judges list isn't loaded yet)
+          const judgeCount = (Array.isArray(judges) && judges.length > 0) ? judges.length : 5;
 
 
           if (tbody) tbody.innerHTML = '';
           const aid = sel ? sel.value : '';
           const list = rows.filter(r => {
             const rAid = String(r.athleteId || r.aid || '');
-            if (aid && rAid !== String(aid)) return false;
-            const rRun = Number(r.run || r.attempt || r.try || 1);
-            return rRun === runNo;
+            return (!aid || rAid === String(aid));
           });
+
+          const criteriaMeta = getCriteria();
 
           list.forEach(r => {
             const jid = (r.judgeId || r.jid || '-').toString();
             const name = (athletes.find(a => (a.aid || a.id) == (r.athleteId || r.aid)) || {}).name
               || (r.athleteId || r.aid || '-');
-            const runLabel = Number(r.run || r.attempt || r.try || runNo);
 
             const totalNum = (() => {
               if (typeof r.total === 'number') return r.total;
 
-              // read scoring weights from setup
-              const scoring = JSON.parse(localStorage.getItem(`scoring_${cid}`) || '{}');
-              const criteria = scoring.criteria || [];
               const s = r.totals || r.scores || {};
 
-              if (criteria.length) {
-                let sum = 0, sumW = 0;
-                criteria.forEach(c => {
-                  const key = c.label.toLowerCase().replace(/\s+/g, '_');
-                  const val = parseFloat(s[key]);
-                  const w = parseFloat(c.weight) || 1;
-                  if (!isNaN(val)) { sum += val * w; sumW += w; }
-                });
-                return sumW ? (sum / sumW) : NaN;
+              if (criteriaMeta.length) {
+                const computed = computeFromCriteria(criteriaMeta, s);
+                if (Number.isFinite(computed)) return computed;
               }
 
               const nums = Object.values(s).map(Number).filter(Number.isFinite);
@@ -873,46 +770,34 @@
 
             if (tbody) {
               const tr = document.createElement('tr');
-              tr.innerHTML = `<td>${jid}</td><td>${name}</td><td>Run ${runLabel}</td><td>${total}</td><td>${time}</td>`;
+              const bag = r.totals || r.scores || {};
+              const cells = [jid, name];
+              criteriaMeta.forEach((c) => {
+                const raw = bag ? bag[c.slug] : undefined;
+                const num = Number(raw);
+                cells.push(Number.isFinite(num) ? num.toFixed(2) : (raw ?? '—'));
+              });
+              cells.push(total, time || '');
+              tr.innerHTML = cells.map(v => `<td>${v === '' ? '—' : v}</td>`).join('');
               tbody.appendChild(tr);
             }
           });
 
           // update submitted counter
-          if (lblStatus) lblStatus.textContent = `${list.length}/${judgeCount} submitted (Run ${runNo})`;
+          if (lblStatus) lblStatus.textContent = `${list.length}/${judgeCount} submitted`;
 
 
           // Compute "Final (current athlete)" with dynamic-criteria support
           // 1) If row has r.total, use it. 2) Else recompute using scoring_<cid> weights.
           //    Falls back to simple mean of any numeric fields if scoring_<cid> missing.
-          const _qs = new URLSearchParams(location.search);
-          const _cid = _qs.get('cid') || '';
-          let _criteria = [];
-          try {
-            const _scRaw = localStorage.getItem('scoring_' + _cid);
-            if (_scRaw) {
-              const _sc = JSON.parse(_scRaw);
-              const arr = Array.isArray(_sc?.criteria) ? _sc.criteria : [];
-              _criteria = arr.map(c => ({
-                slug: String(c.label || c.id || '').toLowerCase().replace(/\s+/g, '_'),
-                w: Number(c.weight) || 1
-              })).filter(x => x.slug);
-            }
-          } catch (_) { }
-
           const totals = list.map(r => {
             if (typeof r.total === 'number') return r.total;
 
             // accept either r.totals or r.scores
             const s = r.totals || r.scores || {};
-            // if we have scoring config, do weighted recompute by slugs
-            if (_criteria.length) {
-              let sum = 0, wsum = 0;
-              for (const { slug, w } of _criteria) {
-                const v = Number(s[slug]);
-                if (Number.isFinite(v)) { sum += v * w; wsum += w; }
-              }
-              if (wsum > 0) return sum / wsum;
+            if (criteriaMeta.length) {
+              const computed = computeFromCriteria(criteriaMeta, s);
+              if (Number.isFinite(computed)) return computed;
             }
             // fallback: mean of any numeric fields present
             const vals = Object.values(s).map(Number).filter(Number.isFinite);
@@ -923,7 +808,7 @@
           let final = '—';
           if (totals.length > 0) {
             let arr = [...totals];
-            if (heatConfig.dropHighLow && arr.length >= 3) {
+            if (drop && drop.checked && arr.length >= 3) {
               arr.sort((a, b) => a - b);
               arr = arr.slice(1, arr.length - 1);
             }
@@ -941,29 +826,57 @@
 
         function saveManualScores() {
           const aid = selAthlete.value;
+          if (!aid) { log('No manual save: athlete not selected'); return; }
           const nowStr = now();
-          const runNumber = progress.currentRun;
-          const inputs = ['J1', 'J2', 'J3', 'J4', 'J5'].map(jid => {
-            const v = document.getElementById(`ms_${jid}`)?.value?.trim();
-            return { jid, val: v };
-          }).filter(x => x.val !== '' && x.val != null);
+          const wrap = document.getElementById('manualScoresWrap');
+          const criteriaMeta = getCriteria();
+          const judgeList = getJudgeRoles();
+          const rowsPending = [];
+          judgeList.forEach((jid) => {
+            const bag = {};
+            let hasBag = false;
+            criteriaMeta.forEach((c) => {
+              const field = wrap?.querySelector(`input[data-jid="${jid}"][data-crit="${c.slug}"]`);
+              const raw = field?.value?.trim();
+              if (!raw) return;
+              const num = Number(raw);
+              if (Number.isFinite(num)) {
+                bag[c.slug] = num;
+                hasBag = true;
+              }
+            });
+            const totalField = wrap?.querySelector(`input[data-total-jid="${jid}"]`);
+            let totalVal = totalField?.value?.trim() || '';
+            let totalNum = totalVal ? Number(totalVal) : NaN;
+            if (!Number.isFinite(totalNum)) {
+              const computed = computeFromCriteria(criteriaMeta, bag);
+              if (Number.isFinite(computed)) totalNum = computed;
+            }
+            if (!hasBag && !Number.isFinite(totalNum)) return;
+            rowsPending.push({ jid, bag, total: Number.isFinite(totalNum) ? totalNum : null });
+          });
 
-          if (!inputs.length) { log('No manual scores entered'); return; }
+          if (!rowsPending.length) { log('No manual scores entered'); return; }
 
           const store = LS.get(k.scores, { results: [] });
           store.results = store.results || [];
 
-          inputs.forEach(({ jid, val }) => {
-            const num = parseFloat(val);
-            if (isNaN(num)) return;
-            // Replace existing entry for this judge+athlete in this heat
-            const idx = store.results.findIndex(r => String(r.jid) === jid && String(r.aid) === String(aid) && Number(r.run || r.attempt || r.try || 1) === runNumber);
-            const row = { jid, aid, total: num, time: nowStr, run: runNumber };
+          rowsPending.forEach(({ jid, bag, total }) => {
+            const row = {
+              aid,
+              judgeId: jid,
+              jid,
+              time: nowStr
+            };
+            if (bag && Object.keys(bag).length) row.totals = bag;
+            if (Number.isFinite(total)) row.total = +Number(total).toFixed(2);
+            const idx = store.results.findIndex(r => String(r.aid || r.athleteId) === String(aid)
+              && String(r.judgeId || r.jid) === String(jid));
             if (idx >= 0) store.results[idx] = row; else store.results.push(row);
           });
 
           LS.set(k.scores, store);
-          log(`SAVE manual scores for aid=${aid} · run=${runNumber}`);
+          log(`SAVE manual scores for aid=${aid} (${rowsPending.length})`);
           refreshScoresTable();
         }
 
@@ -998,9 +911,8 @@
           }
 
           function perJudgeTotalsFor(aid) {
-            const runNumber = progress.currentRun;
-            const rows = normalizeScoresArray().filter(r => String(r.aid || r.athleteId) === String(aid)
-              && Number(r.run || r.attempt || r.try || 1) === runNumber);
+            // latest row per judge for this athlete
+            const rows = normalizeScoresArray().filter(r => String(r.aid || r.athleteId) === String(aid));
             const map = new Map();
             rows.forEach(r => {
               const jid = String(r.jid || r.judgeId || '');
@@ -1017,7 +929,9 @@
           function computeFinal(judgeTotals) {
             if (!judgeTotals.length) return null;
             let arr = judgeTotals.slice();
-            if (heatConfig.dropHighLow && arr.length >= 3) {
+            const rules = LS.get(k.rules, {});
+            if (rules && rules.dropExtremes && arr.length >= 3) {
+              // drop exactly one min & one max
               const min = Math.min(...arr), max = Math.max(...arr);
               let droppedMin = false, droppedMax = false;
               arr = arr.filter(x => {
@@ -1034,18 +948,15 @@
             const aid = selAthlete.value;
             if (!aid) { log('REVEAL aborted: no athlete selected'); return; }
 
-            const runNumber = progress.currentRun;
             const judgeTotals = perJudgeTotalsFor(aid);
             // Fallback to current table calc (already computed + respects drop-extremes)
             const tableFinal = (function () { try { const s = refreshScoresTable(); return s === '—' ? null : Number(s); } catch { return null; } })();
             const final = (judgeTotals.length ? computeFinal(judgeTotals) : null) ?? tableFinal;
 
-            const packet = { cid: CID, eid: EID, heat: HEAT, aid, judgeTotals, final, run: runNumber };
+            const packet = { cid: CID, eid: EID, heat: HEAT, aid, judgeTotals, final };
             LS.set('reveal', packet);                    // ← write complete, ID-only packet
             LS.set('reveal_tick', Date.now());           // nudge TVs to re-render (safe)
-            log(`REVEAL · ${aid} · run=${runNumber} (Final=${final ?? '—'})`);
-            recordRunScore(aid, runNumber, final);
-            refreshStandings();
+            log(`REVEAL · ${aid} (Final=${final ?? '—'})`);
             // --- Auto-update leaderboard (global-safe) ---
             try {
               if (typeof publishLeaderboard === 'function') {
@@ -1064,11 +975,71 @@
 
         function publishLeaderboard() {
           const p = new URLSearchParams(location.search);
-          const CID = p.get('cid'), EID = p.get('eid');
+          const CID = p.get('cid'), EID = p.get('eid'), HEAT = String(p.get('heat'));
 
-          refreshStandings();
-          const rows = latestStandings.rows.filter(row => Number.isFinite(row.best));
-          const rowsOut = rows.map((row, idx) => ({ rank: idx + 1, aid: row.aid, final: row.best }));
+          // Read scoring rules (for weighted recompute if needed)
+          const scoring = LS.get(`scoring_${CID}`, null);
+          const criteria = (scoring && Array.isArray(scoring.criteria)) ? scoring.criteria : [];
+          const slug = s => String(s || '').toLowerCase().replace(/\s+/g, '_');
+          const rules = LS.get(k.rules, {});
+
+          // Normalize scores array (supports legacy {results:[]})
+          let v = LS.get(k.scores, []);
+          const rows = Array.isArray(v) ? v : (v && Array.isArray(v.results)) ? v.results : [];
+
+          // Latest row per (aid, jid)
+          const latest = new Map();
+          for (const r of rows) {
+            const aid = String(r.aid || r.athleteId || r.athlete || '');
+            const jid = String(r.jid || r.judgeId || '');
+            if (!aid || !jid) continue;
+            latest.set(`${aid}|${jid}`, r);
+          }
+
+          // Build per-athlete judge totals
+          const byAid = {};
+          for (const r of latest.values()) {
+            const aid = String(r.aid || r.athleteId);
+            let total = Number.isFinite(r.total) ? Number(r.total) : NaN;
+            if (!Number.isFinite(total)) {
+              const bag = r.totals || r.scores || {};
+              if (criteria.length) {
+                const ws = criteria.map(c => Number(c.weight || 0));
+                const slugs = criteria.map(c => slug(c.label || c.id));
+                const vals = slugs.map(s => Number(bag[s]));
+                if (!vals.some(x => !Number.isFinite(x))) {
+                  const sumW = ws.reduce((a, b) => a + b, 0) || 100;
+                  total = (vals.reduce((acc, v, i) => acc + v * ws[i], 0)) / (sumW / 100);
+                }
+              } else {
+                const nums = [bag.difficulty, bag.execution, bag.flow].map(Number).filter(Number.isFinite);
+                if (nums.length) total = nums.reduce((a, b) => a + b, 0) / nums.length;
+              }
+            }
+            if (!Number.isFinite(total)) continue;
+            (byAid[aid] || (byAid[aid] = [])).push(total);
+          }
+
+          // Apply drop-extremes and compute finals
+          const out = [];
+          for (const aid in byAid) {
+            let arr = byAid[aid].slice();
+            if (rules && rules.dropExtremes && arr.length >= 3) {
+              const min = Math.min(...arr), max = Math.max(...arr);
+              let dm = false, dx = false;
+              arr = arr.filter(x => {
+                if (!dm && x === min) { dm = true; return false; }
+                if (!dx && x === max) { dx = true; return false; }
+                return true;
+              });
+            }
+            const final = +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2);
+            out.push({ aid, final });
+          }
+
+          // Sort + rank; IDs only in storage
+          out.sort((a, b) => b.final - a.final);
+          const rowsOut = out.map((r, i) => ({ rank: i + 1, aid: r.aid, final: r.final }));
 
           LS.set(`leaderboard_${CID}_${EID}`, { rows: rowsOut });
           LS.set('leaderboard_tick', Date.now()); // nudge TVs to refresh
@@ -1086,21 +1057,18 @@
 
 
         // ---------- BUTTONS ----------
-        const btnPrevRun = el('btnPrevRun');
-        if (btnPrevRun) btnPrevRun.onclick = () => setCurrentRun(progress.currentRun - 1);
-        const btnNextRun = el('btnNextRun');
-        if (btnNextRun) btnNextRun.onclick = () => setCurrentRun(progress.currentRun + 1);
-
         el('btnStart').onclick = () => {
           LS.set(k.active, { cid, eid, heat });
           setHeatStatus('Running');
+          const wrap = document.getElementById('manualScoresWrap');
+          if (wrap) wrap.querySelectorAll('input').forEach(inp => { inp.disabled = false; });
           el('activeHeatDebug').textContent = `(active_heat: ${JSON.stringify(LS.get(k.active))})`;
           log(`START heat=${heat}`);
         };
         el('btnLock').onclick = () => {
           setHeatStatus('Completed');
-          // disable manual inputs after lock
-          ['J1', 'J2', 'J3', 'J4', 'J5'].forEach(id => { const inp = document.getElementById(`ms_${id}`); if (inp) inp.disabled = true; });
+          const wrap = document.getElementById('manualScoresWrap');
+          if (wrap) wrap.querySelectorAll('input').forEach(inp => { inp.disabled = true; });
           log('LOCK');
         };
         el('btnReveal').onclick = publishReveal;
@@ -1130,13 +1098,10 @@
         el('btnSaveManual').onclick = saveManualScores;
 
         el('chkDropExtremes').onchange = (e) => {
-          const nextVal = !!e.target.checked;
-          heatConfig.dropHighLow = nextVal;
-          LS.set(k.rules, { dropExtremes: nextVal });
-          persistHeatSnapshot();
-          log(`RULES dropExtremes=${nextVal}`);
+          const next = { dropExtremes: !!e.target.checked };
+          LS.set(k.rules, next);
+          log(`RULES dropExtremes=${next.dropExtremes}`);
           refreshScoresTable();
-          refreshStandings();
         };
         el('selAthlete').onchange = function () { log('SELECT aid=' + this.value); refreshScoresTable(); };
 
@@ -1155,6 +1120,14 @@
           }
           if (ev.key === k.display('live1') || ev.key === k.display('live2')) {
             updateDisplayStatuses();
+          }
+          if (ev.key === k.judges) {
+            renderManualScoresForm();
+          }
+          if (ev.key === `scoring_${cid}`) {
+            renderCriteriaHeader();
+            renderManualScoresForm();
+            refreshScoresTable();
           }
         });
 
@@ -1319,7 +1292,12 @@
             });
 
             // Preset-first roles from judges_<cid> (fallback to J1..J5)
-            var roles = Array.isArray(judgeRoles) && judgeRoles.length ? judgeRoles.slice() : ['J1', 'J2', 'J3', 'J4', 'J5'];
+            var jStore = (function () {
+              try { return JSON.parse(localStorage.getItem('judges_' + cid) || 'null'); } catch (_) { return null; }
+            })();
+            var roles = Array.isArray(jStore?.roles) && jStore.roles.length ? jStore.roles
+              : Array.isArray(jStore?.judges) && jStore.judges.length ? jStore.judges.map(function (j) { return j.jid || j.id; }).filter(Boolean)
+                : ['J1', 'J2', 'J3', 'J4', 'J5'];
 
             // current athlete id → display name
             var aidSel = document.getElementById('selAthlete');

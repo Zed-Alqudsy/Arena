@@ -1,10 +1,8 @@
-# Phase D Implementation Loop #1 — Diff Log
+# Phase D Loop 2 – Diff Log
 
-- `pages/heat_select.html`
-  - Reads heat metadata from `heats_<cid>_<eid>` shell, shows round labels/status, and links by heat ID.
-- `pages/event_admin.html`
-  - Attaches prepared judge roles to each heat, seeds slots from the event roster, and stamps preset defaults (runs, attempts, advancement, drop-high/low, scale).
-- `pages/run_console.html`
-  - Adds run counter UI + navigation, preset-backed scoring config, per-run score storage, standings/advancement table, and preset-aware leaderboard publishing.
-  - Stores heat progress/advancers back into heat snapshots and normalizes judge panels/links with the attached roles.
-- Documentation: added `phaseD_loop1_report.md` and `phaseD_diff_log.md` capturing Loop #1 outcomes and change summary.
+- **shared/state.js** – Added preset/heat auditing helpers, roles registry management, roster audit, and go-live lock utilities.
+- **modules/competition/setup_new.html** – Integrated preset validation banner, roles preview, lock-aware UI, and registry syncing.
+- **modules/competition/preset_mapper.html** – Added preset completeness guard and snapshot audit routine.
+- **pages/event_admin.html** – Surfaced discipline, roles, heat, roster diagnostics, and automated locking workflow.
+- **pages/run_console.html** – Extended scoring UI for criteria, policy banner, discipline guard, and phase consistency call.
+- **core/sync_local.js** – Exposed verifyPhaseConsistency diagnostic API.

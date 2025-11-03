@@ -314,6 +314,7 @@
                 <select id="presetSelect" style="padding:8px;border-radius:8px;border:1px solid #cbd5e1;width:100%">
                     <option value="">— Select Preset —</option>
                 </select>
+                <div id="presetDisciplineAlert" style="display:none;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#9a3412;font-size:13px;"></div>
             </div>
 
             <div class="grid">
@@ -567,6 +568,7 @@
         <!-- Section: Officials -->
         <section class="card">
             <h3>Officials & Roles</h3>
+            <div id="rolesRegistryPreview" style="margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-size:13px;color:var(--muted);"></div>
             <div class="flex">
                 <input id="of_role" placeholder="Role (e.g., Director)" />
                 <input id="of_name" placeholder="Name" />
@@ -725,6 +727,61 @@
                 meta: { createdAt: Date.now(), updatedAt: Date.now(), createdBy: 'admin' }
             };
 
+            function validatePresetSnapshot(cid, opts = {}) {
+                const silent = !!opts.silent;
+                if (!cid) return { missing: ['cid missing'], snapshot: null };
+                const snap = State.getJSON('preset_snapshot_' + cid, null);
+                const missing = [];
+                if (!snap || typeof snap !== 'object') { missing.push('snapshot missing'); }
+                else {
+                    if (!(Number(snap.runsPerAthlete) > 0)) missing.push('runsPerAthlete');
+                    if (!Array.isArray(snap.rounds) || snap.rounds.length === 0) missing.push('rounds');
+                    if (!(Number(snap.judges) > 0)) missing.push('judges');
+                    if (typeof snap.dropHighLow !== 'boolean') missing.push('dropHighLow');
+                    if (!(Number(snap.advancementTopN) > 0)) missing.push('advancementTopN');
+                }
+                if (!silent) {
+                    if (missing.length) {
+                        console.warn(`⚠ Missing: ${missing.join(', ')}`, { cid, snapshot: snap });
+                    } else {
+                        console.log('✅ Preset complete', { cid });
+                    }
+                }
+                return { missing, snapshot: snap };
+            }
+
+            function updateDisciplineBanner() {
+                const alertEl = document.getElementById('presetDisciplineAlert');
+                if (!alertEl) return;
+                const snapshotInfo = validatePresetSnapshot(model.cid, { silent: true });
+                const snap = snapshotInfo.snapshot || window.model?.preset || {};
+                const base = (snap?.discipline || '').trim();
+                if (!base) {
+                    alertEl.style.display = 'none';
+                    alertEl.textContent = '';
+                    alertEl.dataset.warned = '';
+                    return;
+                }
+                const mismatches = (model.events || []).filter(ev => {
+                    const evDisc = ((ev?.preset?.discipline || ev?.discipline || '')).trim();
+                    return evDisc && evDisc.toLowerCase() !== base.toLowerCase();
+                });
+                if (!mismatches.length) {
+                    alertEl.style.display = 'none';
+                    alertEl.textContent = '';
+                    alertEl.dataset.warned = '';
+                    return;
+                }
+                const list = mismatches.map(ev => `${ev.name || ev.eid || 'event'} (${ev?.preset?.discipline || ev?.discipline || '—'})`).join(', ');
+                const message = `⚠ Discipline mismatch: preset=${base} / event=${list}`;
+                alertEl.textContent = message;
+                alertEl.style.display = 'block';
+                if (!alertEl.dataset.warned) {
+                    console.warn(message, { cid: model.cid });
+                    alertEl.dataset.warned = '1';
+                }
+            }
+
             function syncUIfromModel() {
                 f.cid.value = model.cid;
                 f.name.value = model.name;
@@ -788,6 +845,7 @@
                 tb.events.innerHTML = (model.events || []).map((ev, i) => `
           <tr><td>${ev.name || ''}</td><td>${ev.class || ''}</td><td>${ev.gender || ''}</td>
           <td class="row-actions"><a href="#" data-x="ev-del" data-i="${i}">Delete</a></td></tr>`).join('');
+                updateDisciplineBanner();
             }
             function renderCrit() {
                 const total = (model.judging.criteria || []).reduce((s, c) => s + Number(c.weight || 0), 0);
@@ -801,11 +859,60 @@
                 tb.off.innerHTML = (model.officials || []).map((o, i) => `
           <tr><td>${o.role || ''}</td><td>${o.name || ''}</td><td>${o.contact || ''}</td>
           <td class="row-actions"><a href="#" data-x="of-del" data-i="${i}">Delete</a></td></tr>`).join('');
+                renderRolesPreview();
             }
             function renderAth() {
                 tb.ath.innerHTML = (model.athletes || []).map((a, i) => `
           <tr><td>${a.name || ''}</td><td>${a.nation || ''}</td><td>${a.category || ''}</td>
           <td class="row-actions"><a href="#" data-x="at-del" data-i="${i}">Delete</a></td></tr>`).join('');
+            }
+
+            function renderRolesPreview() {
+                const box = document.getElementById('rolesRegistryPreview');
+                if (!box) return;
+                const base = (State.getRolesRegistry ? State.getRolesRegistry(model.cid) : []);
+                const list = Array.isArray(base) ? base.map(r => ({ ...r })) : [];
+                (model.officials || []).forEach(off => {
+                    const key = String(off?.role || '').toLowerCase();
+                    const target = list.find(r => String(r.role || '').toLowerCase() === key);
+                    if (target) {
+                        target.name = off?.name || target.name || '';
+                        target.contact = off?.contact || target.contact || '';
+                    }
+                });
+                if (!list.length) {
+                    box.innerHTML = '<div class="muted">No registry defined.</div>';
+                    return;
+                }
+                box.innerHTML = list.map(r => {
+                    const contact = r.contact ? ` <span style="color:#475569">(${r.contact})</span>` : '';
+                    const name = r.name || '—';
+                    return `<div style="display:flex;justify-content:space-between;gap:12px;"><span><strong>${r.role}</strong></span><span>${name}${contact}</span></div>`;
+                }).join('');
+            }
+
+            function applyLockState() {
+                const locked = State.isEventLocked ? State.isEventLocked(model.cid) : false;
+                if (!locked) return;
+                const presetSelect = document.getElementById('presetSelect');
+                if (presetSelect) {
+                    presetSelect.disabled = true;
+                    presetSelect.title = 'Event locked';
+                }
+                const mapperBtn = document.getElementById('btnPresetMapper');
+                if (mapperBtn) {
+                    mapperBtn.disabled = true;
+                    mapperBtn.title = 'Event locked';
+                }
+                ['p_runsPerAthlete', 'p_tricksPerRound', 'p_judges', 'p_runTime', 'p_advancementTopN', 'p_scoringFormat']
+                    .forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) { el.disabled = true; el.title = 'Locked after validation'; }
+                    });
+                const notice = document.getElementById('rolesRegistryPreview');
+                if (notice) {
+                    notice.insertAdjacentHTML('beforeend', '<div style="margin-top:8px;color:#16a34a;">🔒 Event locked after validation.</div>');
+                }
             }
 
             // ---------- Add row handlers ----------
@@ -936,6 +1043,13 @@
 
             // APPROVE & ACTIVATE (with feedback)
             btn.approve.addEventListener('click', () => {
+                const presetCheck = validatePresetSnapshot(model.cid);
+                if (presetCheck.missing.length) {
+                    msg.innerHTML = '❌ Preset incomplete: ' + presetCheck.missing.join(', ');
+                    msg.style.color = '#ef4444';
+                    try { UI.toast('Preset incomplete: ' + presetCheck.missing.join(', ')); } catch (_) { }
+                    return;
+                }
                 setBusy(btn.approve, true, 'Activating…', '🚀 Approve & Activate');
                 if (!validate()) { setBusy(btn.approve, false); return; }
 
@@ -980,6 +1094,29 @@
                     showLive: !!(model.publishing.showLive)
                 }));
                 localStorage.setItem('officials_' + model.cid, JSON.stringify(model.officials || []));
+                try {
+                    const baseRoles = State.getRolesRegistry ? State.getRolesRegistry(model.cid)
+                        : (State.ensureRolesRegistry ? State.ensureRolesRegistry(model.cid) : []);
+                    const merged = Array.isArray(baseRoles) ? baseRoles.map(r => {
+                        const key = String(r.role || '').toLowerCase();
+                        const match = (model.officials || []).find(off => String(off.role || '').toLowerCase() === key);
+                        return {
+                            ...r,
+                            name: match?.name || r.name || '',
+                            contact: match?.contact || r.contact || ''
+                        };
+                    }) : [];
+                    if (merged.length) {
+                        if (State.writeRolesRegistry) {
+                            State.writeRolesRegistry(model.cid, merged);
+                        } else {
+                            localStorage.setItem(`roles_${model.cid}`, JSON.stringify({ roles: merged, updatedAt: Date.now() }));
+                        }
+                        console.log('✅ Roles registry synced', merged);
+                    }
+                } catch (err) {
+                    console.warn('Failed to sync roles registry', err);
+                }
 
                 // MERGE manual athletes with existing L9 roster (no overwrite)
                 (function () {
@@ -1084,6 +1221,9 @@
                 // keep generated CID; allow user to override before saving
             }
             syncUIfromModel();
+            validatePresetSnapshot(model.cid);
+            updateDisciplineBanner();
+            applyLockState();
         })();
     </script>
     <script>
@@ -1711,6 +1851,7 @@
             // Run on load and whenever preset changes
             window.addEventListener('DOMContentLoaded', updateSummary);
             document.addEventListener('presetChanged', updateSummary);
+            document.addEventListener('presetChanged', updateDisciplineBanner);
         })();
     </script>
 
